@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="flex flex-col md:flex-row gap-6">
+    <aside class="w-full md:w-64 bg-white rounded-lg shadow p-6 h-fit">
+        <div class="text-center mb-6">
+            <h3 class="font-bold text-gray-800">{{ restaurant.name }}</h3>
+        </div>
+        <nav class="space-y-2">
+            <a href="{% url 'dashboard' %}" class="block px-4 py-2 text-gray-600 hover:bg-gray-50 rounded">🏠 ภาพรวมร้าน</a>
+            <a href="{% url 'menu_manage' %}" class="block px-4 py-2 text-gray-600 hover:bg-gray-50 rounded">🍽️ จัดการเมนูอาหาร</a>
+            <a href="{% url 'table_list' %}" class="block px-4 py-2 bg-blue-50 text-blue-700 font-medium rounded">🎫 จัดการโต๊ะ & QR</a>
+        </nav>
+    </aside>
+
+    <main class="flex-1">
+        <div class="flex justify-between items-center mb-6">
+            <h2 class="text-2xl font-bold text-gray-800">จัดการโต๊ะอาหาร</h2>
+        </div>
+
+        <div class="bg-white p-6 rounded-lg shadow mb-6">
+            <form method="post" class="flex gap-4">
+                {% csrf_token %}
+                <input type="text" name="name" placeholder="ชื่อโต๊ะ (เช่น T1, โซน A-1)" class="flex-1 px-4 py-2 text-gray-800 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                <button type="submit" class="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg font-bold">
+                    + เพิ่มโต๊ะ
+                </button>
+            </form>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {% for table in tables %}
+            <div class="bg-white p-6 rounded-lg shadow hover:shadow-md transition">
+                <div class="flex justify-between items-start">
+                    <h3 class="text-xl font-bold text-gray-800">{{ table.name }}</h3>
+                    <form method="post" action="{% url 'delete_table' table.id %}" onsubmit="return confirm('ยืนยันที่จะลบโต๊ะนี้?');">
+                        {% csrf_token %}
+                        <button type="submit" class="text-red-500 hover:text-red-700 text-sm">ลบ</button>
+                    </form>
+                </div>
+                
+                <div class="mt-4 flex justify-center">
+                    <img src="{{ table.get_qr_image }}" alt="QR Code {{ table.name }}" class="w-40 h-40 border p-2">
+                </div>
+                
+                <div class="mt-4 text-center">
+                    <p class="text-xs text-gray-400 mb-2">Scan เพื่อสั่งอาหาร</p>
+                    <a href="{{ table.get_order_url }}" target="_blank" class="text-blue-600 hover:underline text-sm">
+                        ทดสอบลิ้งค์
+                    </a>
+                </div>
+            </div>
+            {% empty %}
+            <div class="col-span-full text-center py-10 text-gray-500">
+                ยังไม่มีโต๊ะอาหาร เริ่มต้นด้วยการเพิ่มโต๊ะแรกของคุณ
+            </div>
+            {% endfor %}
+        </div>
+    </main>
+</div>
+{% endblock %}

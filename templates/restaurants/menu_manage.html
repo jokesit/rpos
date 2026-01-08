@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="flex flex-col md:flex-row gap-6">
+    <aside class="w-full md:w-64 bg-white rounded-lg shadow p-6 h-fit">
+        <h3 class="font-bold text-gray-800 text-center mb-6">{{ restaurant.name }}</h3>
+        <nav class="space-y-2">
+            <a href="{% url 'dashboard' %}" class="block px-4 py-2 text-gray-600 hover:bg-gray-50 rounded">🏠 ภาพรวมร้าน</a>
+            <a href="{% url 'menu_manage' %}" class="block px-4 py-2 bg-blue-50 text-blue-700 font-medium rounded">🍽️ จัดการเมนูอาหาร</a>
+            <a href="{% url 'table_list' %}" class="block px-4 py-2 text-gray-600 hover:bg-gray-50 rounded">🎫 จัดการโต๊ะ & QR</a>
+        </nav>
+    </aside>
+
+    <main class="flex-1">
+        <div class="flex justify-between items-center mb-6">
+            <h2 class="text-2xl font-bold text-gray-800">รายการอาหาร</h2>
+            <div class="space-x-2">
+                <a href="{% url 'add_category' %}" class="bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2 rounded font-bold">+ หมวดหมู่</a>
+                <a href="{% url 'add_menu_item' %}" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded font-bold">+ เพิ่มเมนู</a>
+            </div>
+        </div>
+
+        {% for category in categories %}
+        <div class="bg-white rounded-lg shadow mb-6 overflow-hidden">
+            <div class="bg-gray-100 px-6 py-3 border-b flex justify-between items-center group">
+                <div>
+                    <h3 class="font-bold text-lg text-gray-900 inline">{{ category.name }}</h3>
+                    <span class="text-xs text-gray-500 ml-2">ลำดับ: {{ category.order }}</span>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <a href="{% url 'edit_category' category.id %}" class="text-gray-400 hover:text-blue-600 text-sm">แก้ไขชื่อ</a>
+                    <form method="post" action="{% url 'delete_category' category.id %}" onsubmit="return confirm('การลบหมวดหมู่ เมนูข้างในจะหายทั้งหมด! ยืนยัน?');" class="inline">
+                        {% csrf_token %}
+                        <button type="submit" class="text-gray-400 hover:text-red-600 text-sm">ลบ</button>
+                    </form>
+                </div>
+            </div>
+
+            <div class="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {% for item in category.items.all %}
+                <div class="flex flex-col border p-3 rounded hover:shadow-md transition bg-white relative h-full">
+                    
+                    <div class="flex gap-4 mb-2">
+                        <div class="w-20 h-20 bg-gray-200 rounded overflow-hidden shrink-0">
+                            {% if item.image %}
+                                <img src="{{ item.image.url }}" class="w-full h-full object-cover">
+                            {% else %}
+                                <div class="flex items-center justify-center h-full text-gray-400 text-xs">No Image</div>
+                            {% endif %}
+                        </div>
+                        <div class="flex-1">
+                            <h4 class="font-bold text-gray-800">{{ item.name }}</h4>
+                            <p class="text-green-600 font-bold">฿{{ item.price }}</p>
+                            
+                            <div class="mt-1">
+                                {% if not item.is_available %}
+                                    <span class="inline-block text-[10px] bg-red-100 text-red-600 px-2 py-0.5 rounded-full">หมด</span>
+                                {% else %}
+                                    <span class="inline-block text-[10px] bg-green-100 text-green-600 px-2 py-0.5 rounded-full">พร้อมขาย</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <p class="text-xs text-gray-500 mb-4 line-clamp-2 min-h-[2.5em]">
+                        {{ item.description|default:"-" }}
+                    </p>
+
+                    <div class="mt-auto flex gap-2 pt-3 border-t">
+                        <a href="{% url 'edit_menu_item' item.id %}" class="flex-1 text-center bg-blue-50 text-blue-600 hover:bg-blue-100 py-1.5 rounded text-sm font-medium transition">
+                            ✏️ แก้ไข
+                        </a>
+                        
+                        <form method="post" action="{% url 'delete_menu_item' item.id %}" onsubmit="return confirm('ยืนยันลบเมนู {{ item.name }}?');" class="flex-1">
+                            {% csrf_token %}
+                            <button type="submit" class="w-full bg-red-50 text-red-600 hover:bg-red-100 py-1.5 rounded text-sm font-medium transition">
+                                🗑️ ลบ
+                            </button>
+                        </form>
+                    </div>
+
+                </div>
+                {% empty %}
+                <p class="text-gray-400 text-sm col-span-full text-center py-4">ยังไม่มีเมนูในหมวดนี้</p>
+                {% endfor %}
+            </div>
+        </div>
+        {% endfor %}
+    </main>
+</div>
+{% endblock %}

@@ -1,0 +1,92 @@
+# ==================================
+# 1. Python & Virtual Environment
+# ==================================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual Environments (เผื่อคุณตั้งชื่อต่างๆ กัน)
+venv/
+.venv/
+env/
+.env_dir/
+myenv/
+
+# ==================================
+# 2. Django Specific
+# ==================================
+*.log
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+# หากใช้ email backend แบบ file based ในการ test
+sent_emails/
+
+# ==================================
+# 3. Environment Variables (สำคัญมาก ห้ามหลุด)
+# ==================================
+.env
+.env.local
+.env.*
+
+# ==================================
+# 4. Media & Static Files (โปรเจกต์ Portfolio)
+# ==================================
+# Static files ที่ถูก collect แล้ว (สำหรับ Production) ไม่ต้องเอาขึ้น
+staticfiles/
+
+# User-uploaded files (รูปปก, รูป Gallery)
+# เราต้องการเก็บโฟลเดอร์ media ไว้ แต่ไม่เอาไฟล์ข้างใน
+media/*
+!media/.gitkeep
+
+# ==================================
+# 5. Frontend / Node.js (Tailwind & DaisyUI)
+# ==================================
+# โฟลเดอร์นี้ใหญ่มาก และ generate ใหม่ได้ด้วย npm install
+node_modules/
+
+# Logs ของ npm
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# หากมีการ Build CSS ออกมาเป็นไฟล์ dist แล้วไม่อยากเก็บ version control
+# (แต่ถ้าเป็น Django template ปกติ บางทีเราอาจจะ commit ไฟล์ css ปลายทาง
+# ถ้าคุณ commit ไฟล์ css ปลายทาง ให้ข้ามบรรทัดนี้ไป)
+# /static/css/dist/
+
+# ==================================
+# 6. IDE & OS Files (ไฟล์ขยะของโปรแกรม)
+# ==================================
+# macOS
+.DS_Store
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# VS Code
+.vscode/
+
+# PyCharm
+.idea/

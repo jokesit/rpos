@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="flex justify-between items-center mb-6">
+    <h1 class="text-2xl font-bold text-gray-800">🖥️ Cashier / POS</h1>
+    <div class="text-sm text-gray-500">
+        {{ restaurant.name }}
+    </div>
+</div>
+
+<div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
+    {% for table in tables %}
+    <a href="{% url 'table_bill_detail' table.id %}" 
+       class="relative p-6 rounded-xl shadow-sm border-2 transition hover:shadow-md
+       {% if table.has_active_order %}
+         bg-blue-50 border-blue-500 cursor-pointer
+       {% else %}
+         bg-white border-gray-200 opacity-70 hover:opacity-100
+       {% endif %}">
+        
+        <h3 class="text-xl font-bold text-gray-700 mb-2">{{ table.name }}</h3>
+        
+        {% if table.has_active_order %}
+            <div class="text-blue-600 font-bold text-lg">
+                ฿{{ table.pending_amount }}
+            </div>
+            <p class="text-xs text-gray-500 mt-1">{{ table.order_count }} ออเดอร์</p>
+            
+            <span class="absolute top-2 right-2 flex h-3 w-3">
+              <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+              <span class="relative inline-flex rounded-full h-3 w-3 bg-blue-500"></span>
+            </span>
+        {% else %}
+            <div class="text-gray-300 font-bold text-lg">ว่าง</div>
+        {% endif %}
+    </a>
+    {% endfor %}
+</div>
+{% endblock %}

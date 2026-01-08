@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="max-w-md mx-auto bg-white rounded-xl shadow-md overflow-hidden md:max-w-2xl mt-10 p-8 text-center">
+    <div class="uppercase tracking-wide text-sm text-indigo-500 font-semibold">สถานะบัญชี</div>
+    <h1 class="block mt-1 text-lg leading-tight font-medium text-black">รอการอนุมัติจากผู้ดูแลระบบ</h1>
+    <p class="mt-2 text-gray-500">
+        ขอบคุณที่สมัครใช้งาน RPOS <br>
+        ขณะนี้บัญชีของคุณกำลังรอการตรวจสอบจาก Admin <br>
+        คุณจะได้รับอีเมลแจ้งเตือนเมื่อบัญชีได้รับการอนุมัติแล้ว
+    </p>
+    <div class="mt-6">
+        <span class="inline-block bg-yellow-100 text-yellow-800 text-xs px-2 rounded-full uppercase font-semibold tracking-wide">Pending Approval</span>
+    </div>
+</div>
+{% endblock %}

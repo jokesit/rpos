@@ -1,0 +1,151 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="flex justify-between items-center mb-6">
+    <h1 class="text-2xl font-bold text-gray-800">👨‍🍳 Kitchen Monitor: {{ restaurant.name }}</h1>
+    <span class="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm font-bold flex items-center">
+        <span class="w-2 h-2 bg-green-500 rounded-full mr-2 animate-pulse"></span>
+        Live Connection
+    </span>
+</div>
+
+<div id="order-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+    
+    {% for order in orders %}
+    <div class="bg-white border-l-4 {% if order.status == 'PENDING' %}border-yellow-500{% else %}border-blue-500{% endif %} rounded-lg shadow-md p-4" id="order-{{ order.id }}">
+        <div class="flex justify-between items-start mb-2">
+            <div>
+                <h3 class="font-bold text-xl text-gray-800">โต๊ะ {{ order.table.name }}</h3>
+                <p class="text-xs text-gray-500">#{{ order.id }} • {{ order.created_at|date:"H:i" }}</p>
+            </div>
+            <span class="text-xs font-bold px-2 py-1 rounded text-white 
+                {% if order.status == 'PENDING' %}bg-yellow-500{% else %}bg-blue-600{% endif %}">
+                {{ order.get_status_display }}
+            </span>
+        </div>
+        
+        <div class="space-y-2 my-4 border-t border-b py-2 border-dashed">
+            {% for item in order.items.all %}
+            <div class="flex justify-between text-sm text-gray-800">
+                <span>{{ item.quantity }}x {{ item.menu_item.name }}</span>
+            </div>
+            {% endfor %}
+        </div>
+        
+        <div class="mt-4">
+            {% if order.status == 'PENDING' %}
+            <button onclick="updateStatus('{{ order.id }}', 'COOKING')" 
+                    class="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 transition font-bold shadow-sm">
+                🔥 เริ่มทำอาหาร
+            </button>
+            {% elif order.status == 'COOKING' %}
+            <button onclick="updateStatus('{{ order.id }}', 'SERVED')" 
+                    class="w-full bg-green-600 text-white py-2 rounded hover:bg-green-700 transition font-bold shadow-sm">
+                ✅ เสร็จแล้ว / พร้อมเสิร์ฟ
+            </button>
+            {% endif %}
+        </div>
+    </div>
+    {% endfor %}
+
+</div>
+
+<audio id="notify-sound" src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3" preload="auto"></audio>
+
+<script>
+    // 1. ฟังก์ชันอัปเดตสถานะ (เรียกใช้เมื่อกดปุ่ม)
+    function updateStatus(orderId, newStatus) {
+        // ถามยืนยันเพื่อกันมือลั่น
+        if(!confirm('ยืนยันเปลี่ยนสถานะ?')) return;
+
+        fetch('/orders/api/update-status/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                // 'X-CSRFToken': '{{ csrf_token }}' // ถ้าไม่ได้ใช้ @csrf_exempt ต้องเปิดบรรทัดนี้
+            },
+            body: JSON.stringify({
+                order_id: orderId,
+                status: newStatus
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // ถ้าย้ายสถานะสำเร็จ ให้รีโหลดหน้า
+                window.location.reload();
+            } else {
+                alert('Error: ' + data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('เกิดข้อผิดพลาดในการเชื่อมต่อ');
+        });
+    }
+
+    // 2. เชื่อมต่อ WebSocket
+    const restaurantId = "{{ restaurant.id }}";
+    const ws_scheme = window.location.protocol === "https:" ? "wss" : "ws";
+    const orderSocket = new WebSocket(
+        ws_scheme + '://' + window.location.host +
+        '/ws/orders/' + restaurantId + '/'
+    );
+
+    orderSocket.onmessage = function(e) {
+        const data = JSON.parse(e.data);
+        console.log("New Order:", data);
+        
+        // เล่นเสียงแจ้งเตือน
+        const audio = document.getElementById('notify-sound');
+        audio.play().catch(e => console.log("Audio play failed usually due to browser policy", e));
+
+        // สร้าง HTML Card ใหม่
+        const order = data.order;
+        
+        // สร้างรายการอาหาร HTML
+        const itemsHtml = order.items.map(item => 
+            `<div class="flex justify-between text-sm text-gray-800"><span>${item}</span></div>`
+        ).join('');
+
+        // ในส่วน JS Template String นี้เราไม่ต้องใส่ Quote เพราะมันเป็น JS อยู่แล้ว
+        const newCard = `
+            <div class="bg-white border-l-4 border-yellow-500 rounded-lg shadow-md p-4 animate-bounce-once" id="order-${order.id}">
+                <div class="flex justify-between items-start mb-2">
+                    <div>
+                        <h3 class="font-bold text-xl text-gray-800">โต๊ะ ${order.table} <span class="text-red-500 text-xs ml-2 animate-pulse">NEW!</span></h3>
+                        <p class="text-xs text-gray-500">#${order.id} • ${order.created_at}</p>
+                    </div>
+                    <span class="text-xs font-bold px-2 py-1 rounded text-white bg-yellow-500">รอรับออเดอร์</span>
+                </div>
+                <div class="space-y-2 my-4 border-t border-b py-2 border-dashed">
+                    ${itemsHtml}
+                </div>
+                <div class="mt-4">
+                    <button onclick="updateStatus('${order.id}', 'COOKING')" class="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 transition font-bold shadow-sm">
+                        🔥 เริ่มทำอาหาร
+                    </button>
+                </div>
+            </div>
+        `;
+        
+        // แทรกการ์ดใหม่ไปไว้ตัวแรกสุด
+        const container = document.getElementById('order-container');
+        container.insertAdjacentHTML('afterbegin', newCard);
+    };
+
+    orderSocket.onclose = function(e) {
+        console.error('Chat socket closed unexpectedly');
+    };
+</script>
+
+<style>
+    @keyframes bounce-once {
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(-10px); }
+    }
+    .animate-bounce-once {
+        animation: bounce-once 0.5s ease-in-out;
+    }
+</style>
+{% endblock %}

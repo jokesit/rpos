@@ -1,0 +1,193 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="h-[calc(100vh-100px)] flex flex-col md:flex-row gap-6">
+    
+    <div class="flex-1 bg-white rounded-xl shadow-lg overflow-hidden flex flex-col">
+        <div class="p-4 bg-gray-50 border-b flex justify-between items-center">
+            <div>
+                <h2 class="text-xl font-bold text-gray-800">รายการอาหาร</h2>
+                <p class="text-sm text-gray-500">โต๊ะ: {{ table.name }}</p>
+            </div>
+            <a href="{% url 'cashier_dashboard' %}" class="text-gray-500 hover:text-gray-700">
+                &larr; กลับ
+            </a>
+        </div>
+        
+        <div class="flex-1 overflow-y-auto p-4">
+            <table class="w-full">
+                <thead class="text-left text-gray-500 text-sm border-b">
+                    <tr>
+                        <th class="pb-2">รายการ</th>
+                        <th class="pb-2 text-center">จำนวน</th>
+                        <th class="pb-2 text-right">ราคา</th>
+                        <th class="pb-2 text-right">รวม</th>
+                    </tr>
+                </thead>
+                <tbody class="text-gray-700">
+                    {% for item in order_items %}
+                    <tr class="border-b border-gray-100 last:border-0 hover:bg-gray-50">
+                        <td class="py-3">
+                            <div class="font-bold">{{ item.menu_name }}</div>
+                            <div class="text-xs text-gray-400">สั่งเมื่อ {{ item.order_time|date:"H:i" }}</div>
+                        </td>
+                        <td class="py-3 text-center">x{{ item.quantity }}</td>
+                        <td class="py-3 text-right">{{ item.price }}</td>
+                        <td class="py-3 text-right font-bold">{{ item.total }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="4" class="text-center py-10 text-gray-400">ไม่มีรายการอาหาร</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="w-full md:w-96 bg-white rounded-xl shadow-lg flex flex-col h-fit">
+        <div class="p-6 bg-blue-600 text-white rounded-t-xl">
+            <h3 class="text-sm opacity-80 mb-1">ยอดสุทธิ (Grand Total)</h3>
+            <div class="text-4xl font-bold">฿{{ grand_total|floatformat:2 }}</div>
+        </div>
+
+        <div class="p-6 space-y-3 border-b border-dashed">
+            <div class="flex justify-between text-gray-600">
+                <span>ยอดรวมสินค้ (Subtotal)</span>
+                <span>฿{{ subtotal|floatformat:2 }}</span>
+            </div>
+            
+            {% if restaurant.service_charge_percent > 0 %}
+            <div class="flex justify-between text-gray-600">
+                <span>Service Charge ({{ restaurant.service_charge_percent }}%)</span>
+                <span>฿{{ service_charge_amount|floatformat:2 }}</span>
+            </div>
+            {% endif %}
+
+            {% if restaurant.vat_percent > 0 %}
+            <div class="flex justify-between text-gray-600">
+                <span>VAT ({{ restaurant.vat_percent }}%)</span>
+                <span>฿{{ vat_amount|floatformat:2 }}</span>
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="p-6 mt-auto">
+            <form method="post" action="{% url 'close_bill' table.id %}" onsubmit="return confirm('ยืนยันรับชำระเงิน? รายการจะถูกปิดทันที');">
+                {% csrf_token %}
+                
+                <div class="mb-4">
+                    <label class="block text-sm font-bold text-gray-700 mb-2">วิธีชำระเงิน</label>
+                    <div class="grid grid-cols-2 gap-2">
+                        <button type="button" class="text-gray-800 border rounded p-2 hover:bg-blue-50 focus:ring-2 ring-blue-500 text-sm">💵 เงินสด</button>
+                        <button type="button" class="text-gray-800 border rounded p-2 hover:bg-blue-50 focus:ring-2 ring-blue-500 text-sm">📲 สแกนจ่าย</button>
+                    </div>
+                </div>
+
+                <button type="submit" class="w-full bg-green-600 hover:bg-green-700 text-white py-4 rounded-xl font-bold text-lg shadow-lg transition transform active:scale-95">
+                    ✅ รับชำระเงิน / ปิดโต๊ะ
+                </button>
+            </form>
+            
+            <button onclick="window.print()" class="w-full mt-3 text-gray-500 hover:text-gray-800 text-sm py-2">
+                🖨️ พิมพ์ใบเสร็จอย่างย่อ
+            </button>
+        </div>
+    </div>
+
+</div>
+
+<style>
+    @media print {
+        /* 1. ซ่อนทุกอย่างในหน้าเว็บ */
+        body * {
+            visibility: hidden;
+            height: 0;
+            overflow: hidden;
+        }
+
+        /* 2. กำหนดให้แสดงเฉพาะส่วนที่จะพิมพ์ */
+        #printable-area, #printable-area * {
+            visibility: visible;
+            height: auto;
+            overflow: visible;
+        }
+
+        /* 3. จัดตำแหน่งให้ใบเสร็จอยู่มุมซ้ายบนของกระดาษ */
+        #printable-area {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%; /* หรือกำหนดเป็น 80mm ถ้าต้องการความเป๊ะ */
+            margin: 0;
+            padding: 0;
+            background-color: white;
+            color: black;
+        }
+        
+        /* ซ่อนปุ่มต่างๆ ในพื้นที่พิมพ์ */
+        .no-print {
+            display: none !important;
+        }
+    }
+</style>
+
+<div id="printable-area" class="hidden print:block p-4 bg-white text-black font-mono text-sm">
+    <div class="text-center mb-4">
+        <h1 class="text-xl font-bold">{{ restaurant.name }}</h1>
+        <p>{{ restaurant.address }}</p>
+        <p>Tel: {{ restaurant.phone }}</p>
+        <hr class="border-black my-2 border-dashed">
+        <p>โต๊ะ: {{ table.name }}</p>
+        <p>วันที่: {% now "d/m/Y H:i" %}</p>
+    </div>
+
+    <table class="w-full mb-4">
+        <thead>
+            <tr class="border-b border-black border-dashed">
+                <th class="text-left">รายการ</th>
+                <th class="text-right">รวม</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in order_items %}
+            <tr>
+                <td>{{ item.menu_name }} <span class="text-xs">x{{ item.quantity }}</span></td>
+                <td class="text-right">{{ item.total|floatformat:2 }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <hr class="border-black my-2 border-dashed">
+
+    <div class="flex justify-between font-bold">
+        <span>ยอดรวม</span>
+        <span>{{ subtotal|floatformat:2 }}</span>
+    </div>
+    
+    {% if restaurant.service_charge_percent > 0 %}
+    <div class="flex justify-between text-xs">
+        <span>S.C. {{ restaurant.service_charge_percent }}%</span>
+        <span>{{ service_charge_amount|floatformat:2 }}</span>
+    </div>
+    {% endif %}
+
+    {% if restaurant.vat_percent > 0 %}
+    <div class="flex justify-between text-xs">
+        <span>VAT {{ restaurant.vat_percent }}%</span>
+        <span>{{ vat_amount|floatformat:2 }}</span>
+    </div>
+    {% endif %}
+
+    <div class="flex justify-between text-xl font-bold mt-2 border-t-2 border-black pt-2">
+        <span>สุทธิ</span>
+        <span>{{ grand_total|floatformat:2 }}</span>
+    </div>
+
+    <div class="text-center mt-6 text-xs">
+        <p>ขอบคุณที่ใช้บริการ</p>
+        <p>Powered by RPOS System</p>
+    </div>
+</div>
+{% endblock %}

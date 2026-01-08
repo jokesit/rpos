@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="flex flex-col md:flex-row gap-6">
+    <aside class="w-full md:w-64 bg-white rounded-lg shadow p-6 h-fit">
+        <div class="text-center mb-6">
+            <h3 class="font-bold text-gray-800">{{ restaurant.name }}</h3>
+        </div>
+        <nav class="space-y-2">
+            <a href="{% url 'dashboard' %}" class="block px-4 py-2 text-gray-600 hover:bg-gray-50 rounded">🏠 ภาพรวมร้าน</a>
+            <a href="{% url 'report_sales' %}" class="block px-4 py-2 bg-blue-50 text-blue-700 font-medium rounded">📊 รายงานยอดขาย</a>
+        </nav>
+    </aside>
+
+    <main class="flex-1">
+        <h2 class="text-2xl font-bold text-gray-800 mb-6">รายงานยอดขาย</h2>
+
+        <div class="bg-linear-to-r from-green-500 to-emerald-600 rounded-xl shadow-lg p-6 text-white mb-8">
+            <h3 class="text-lg opacity-90">ยอดขายวันนี้</h3>
+            <p class="text-4xl font-bold mt-2">฿{{ today_sales|floatformat:2 }}</p>
+        </div>
+
+        <div class="bg-white rounded-xl shadow overflow-hidden">
+            <div class="px-6 py-4 border-b">
+                <h3 class="font-bold text-gray-700">ยอดขายย้อนหลัง 7 วัน</h3>
+            </div>
+            <table class="w-full">
+                <thead class="bg-gray-50 text-gray-500 text-sm">
+                    <tr>
+                        <th class="px-6 py-3 text-left">วันที่</th>
+                        <th class="px-6 py-3 text-center">จำนวนออเดอร์</th>
+                        <th class="px-6 py-3 text-right">ยอดรวม</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100">
+                    {% for day in daily_sales %}
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-6 py-4 text-gray-800">{{ day.date|date:"d M Y" }}</td>
+                        <td class="px-6 py-4 text-center text-gray-800">{{ day.count }}</td>
+                        <td class="px-6 py-4 text-right font-bold text-green-600">฿{{ day.total|floatformat:2 }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="3" class="px-6 py-8 text-center text-gray-400">ยังไม่มีข้อมูลการขาย</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </main>
+</div>
+{% endblock %}

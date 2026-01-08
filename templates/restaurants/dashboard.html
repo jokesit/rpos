@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="flex flex-col md:flex-row gap-6">
+    <aside class="w-full md:w-64 bg-white rounded-lg shadow p-6 h-fit">
+        <div class="text-center mb-6">
+            <div class="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mx-auto text-blue-500 text-3xl font-bold">
+                {{ restaurant.name|slice:":1" }}
+            </div>
+            <h3 class="mt-4 font-bold text-gray-800">{{ restaurant.name }}</h3>
+            <p class="text-sm text-gray-500">Shop ID: {{ restaurant.id }}</p>
+        </div>
+        
+        <nav class="space-y-2">
+            <a href="{% url 'dashboard' %}" class="block px-4 py-2 bg-blue-50 text-blue-700 font-medium rounded">🏠 ภาพรวมร้าน</a>
+            <a href="{% url 'menu_manage' %}" class="block px-4 py-2 text-gray-600 hover:bg-gray-50 rounded">🍽️ จัดการเมนูอาหาร</a>
+            <a href="{% url 'table_list' %}" class="block px-4 py-2 text-gray-600 hover:bg-gray-50 rounded">🎫 จัดการ QR Code</a>
+            <a href="{% url 'kitchen_dashboard' %}" target="_blank" class="block px-4 py-2 text-gray-600 hover:bg-gray-50 rounded">🧑‍🍳 จอห้องครัว</a>
+            <a href="#" class="block px-4 py-2 text-gray-600 hover:bg-gray-50 rounded">⚙️ ตั้งค่าร้าน</a>
+        </nav>
+    </aside>
+
+    <main class="flex-1">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+            <div class="bg-white p-6 rounded-lg shadow border-l-4 border-green-500">
+                <p class="text-gray-500 text-sm">ยอดขายวันนี้</p>
+                <p class="text-2xl font-bold text-gray-800">฿0.00</p>
+            </div>
+            <div class="bg-white p-6 rounded-lg shadow border-l-4 border-blue-500">
+                <p class="text-gray-500 text-sm">ออเดอร์ที่กำลังทำ</p>
+                <p class="text-2xl font-bold text-gray-800">0 รายการ</p>
+            </div>
+            <div class="bg-white p-6 rounded-lg shadow border-l-4 border-orange-500">
+                <p class="text-gray-500 text-sm">โต๊ะที่เปิดอยู่</p>
+                <p class="text-2xl font-bold text-gray-800">0 โต๊ะ</p>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow p-6">
+            <h2 class="text-xl text-gray-900 font-bold mb-4">ยินดีต้อนรับสู่ RPOS Dashboard</h2>
+            <p class="text-gray-600">
+                ระบบจัดการร้านอาหารของคุณพร้อมใช้งานแล้ว <br>
+                เริ่มจากการ <strong>เพิ่มโต๊ะ</strong> และ <strong>สร้างเมนูอาหาร</strong> ที่แถบเมนูด้านซ้ายได้เลย
+            </p>
+        </div>
+    </main>
+</div>
+{% endblock %}
