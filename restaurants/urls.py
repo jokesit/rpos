@@ -31,4 +31,6 @@ urlpatterns = [
     path('cashier/<int:table_id>/pay/', views.close_bill, name='close_bill'),
 
     path('report/', views.report_sales, name='report_sales'),
+
+    path('settings/', views.restaurant_settings, name='restaurant_settings'),
 ]

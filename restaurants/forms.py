@@ -60,3 +60,29 @@ class MenuItemForm(forms.ModelForm):
         # กรองให้เลือกได้เฉพาะ Category ของร้านตัวเองเท่านั้น! (สำคัญมาก)
         if restaurant:
             self.fields['category'].queryset = Category.objects.filter(restaurant=restaurant)
+
+
+
+# setting form of retaurants
+class RestaurantSettingsForm(forms.ModelForm):
+    class Meta:
+        model = Restaurant
+        fields = ['name', 'address', 'phone', 'vat_percent', 'service_charge_percent']
+        labels = {
+            'name': 'ชื่อร้านค้า',
+            'address': 'ที่อยู่',
+            'phone': 'เบอร์โทรศัพท์ติดต่อ',
+            'vat_percent': 'ภาษีมูลค่าเพิ่ม (VAT %)',
+            'service_charge_percent': 'ค่าบริการ (Service Charge %)'
+        }
+        widgets = {
+            'address': forms.Textarea(attrs={'rows': 3}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # จัด Style ให้สวยงามด้วย Tailwind
+        for field in self.fields.values():
+            field.widget.attrs.update({
+                'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition'
+            })

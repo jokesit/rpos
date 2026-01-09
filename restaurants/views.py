@@ -2,8 +2,8 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from .models import Restaurant, Table, Category, MenuItem # import เพิ่ม
-from .forms import RestaurantForm, CategoryForm, MenuItemForm
-from django.db.models import Sum, Count
+from .forms import RestaurantForm, CategoryForm, MenuItemForm, RestaurantSettingsForm
+from django.db.models import Sum, Count, Q
 from django.db.models.functions import TruncDate
 from decimal import Decimal
 from django.utils import timezone
@@ -12,14 +12,41 @@ from django.utils import timezone
 # for show owner
 @login_required
 def dashboard(request):
-    # เช็คว่ามีร้านหรือยัง
-    try:
-        restaurant = request.user.restaurant
-        # ถ้ามีร้านแล้ว ให้ไปหน้าจัดการ (ตอนนี้โชว์ชื่อร้านไปก่อน)
-        return render(request, 'restaurants/dashboard.html', {'restaurant': restaurant})
-    except Restaurant.DoesNotExist:
-        # ถ้ายังไม่มีร้าน ให้ไปหน้าสร้างร้าน
-        return redirect('create_restaurant')
+    restaurant = request.user.restaurant
+    today = timezone.now().date()
+
+    # 1. ยอดขายวันนี้ (เฉพาะที่จ่ายเงินแล้ว)
+    today_sales = restaurant.orders.filter(
+        created_at__date=today, 
+        is_paid=True
+    ).aggregate(Sum('total_price'))['total_price__sum'] or 0
+
+    # 2. จำนวนออเดอร์วันนี้
+    today_orders_count = restaurant.orders.filter(created_at__date=today).count()
+
+    # 3. ออเดอร์ที่รอครัวทำ (Pending/Cooking)
+    pending_orders_count = restaurant.orders.filter(
+        status__in=['PENDING', 'COOKING']
+    ).count()
+
+    # 4. โต๊ะที่กำลังใช้งาน (Active Tables)
+    # นับโต๊ะที่มีออเดอร์ค้างชำระ
+    active_tables_count = restaurant.tables.filter(
+        orders__is_paid=False
+    ).exclude(orders__status='CANCELLED').distinct().count()
+
+    # 5. รายการล่าสุด 5 รายการ (Recent Activity)
+    recent_orders = restaurant.orders.order_by('-created_at')[:5]
+
+    context = {
+        'restaurant': restaurant,
+        'today_sales': today_sales,
+        'today_orders_count': today_orders_count,
+        'pending_orders_count': pending_orders_count,
+        'active_tables_count': active_tables_count,
+        'recent_orders': recent_orders,
+    }
+    return render(request, 'restaurants/dashboard.html', context)
 
 @login_required
 def create_restaurant(request):
@@ -342,5 +369,28 @@ def report_sales(request):
     })
 
 # ----------
+
+# setting
+
+@login_required
+def restaurant_settings(request):
+    restaurant = request.user.restaurant
+    
+    if request.method == 'POST':
+        form = RestaurantSettingsForm(request.POST, request.FILES, instance=restaurant)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'บันทึกการตั้งค่าเรียบร้อยแล้ว')
+            return redirect('restaurant_settings')
+    else:
+        form = RestaurantSettingsForm(instance=restaurant)
+        
+    return render(request, 'restaurants/settings.html', {
+        'form': form,
+        'restaurant': restaurant
+    })
+
+
+# -------
 
 

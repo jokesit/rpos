@@ -2,46 +2,132 @@
 
 {% block content %}
 <div class="flex flex-col md:flex-row gap-6">
-    <aside class="w-full md:w-64 bg-white rounded-lg shadow p-6 h-fit">
+    
+    <aside class="w-full md:w-64 bg-white rounded-xl shadow-sm border border-gray-100 p-6 h-fit shrink-0">
         <div class="text-center mb-6">
-            <div class="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mx-auto text-blue-500 text-3xl font-bold">
-                {{ restaurant.name|slice:":1" }}
+            <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3 text-2xl">
+                🏪
             </div>
-            <h3 class="mt-4 font-bold text-gray-800">{{ restaurant.name }}</h3>
-            <p class="text-sm text-gray-500">Shop ID: {{ restaurant.id }}</p>
+            <h3 class="font-bold text-gray-800 text-lg">{{ restaurant.name }}</h3>
+            <p class="text-xs text-gray-500">Owner Dashboard</p>
         </div>
-        
-        <nav class="space-y-2">
-            <a href="{% url 'dashboard' %}" class="block px-4 py-2 bg-blue-50 text-blue-700 font-medium rounded">🏠 ภาพรวมร้าน</a>
-            <a href="{% url 'menu_manage' %}" class="block px-4 py-2 text-gray-600 hover:bg-gray-50 rounded">🍽️ จัดการเมนูอาหาร</a>
-            <a href="{% url 'table_list' %}" class="block px-4 py-2 text-gray-600 hover:bg-gray-50 rounded">🎫 จัดการ QR Code</a>
-            <a href="{% url 'kitchen_dashboard' %}" target="_blank" class="block px-4 py-2 text-gray-600 hover:bg-gray-50 rounded">🧑‍🍳 จอห้องครัว</a>
-            <a href="#" class="block px-4 py-2 text-gray-600 hover:bg-gray-50 rounded">⚙️ ตั้งค่าร้าน</a>
+        <nav class="space-y-1">
+            <a href="{% url 'dashboard' %}" class="flex items-center gap-3 px-4 py-3 bg-blue-50 text-blue-700 font-bold rounded-lg transition">
+                <span>🏠</span> ภาพรวม
+            </a>
+            <a href="{% url 'menu_manage' %}" class="flex items-center gap-3 px-4 py-3 text-gray-600 hover:bg-gray-50 rounded-lg transition">
+                <span>🍽️</span> จัดการเมนู
+            </a>
+            <a href="{% url 'table_list' %}" class="flex items-center gap-3 px-4 py-3 text-gray-600 hover:bg-gray-50 rounded-lg transition">
+                <span>🎫</span> โต๊ะ & QR Code
+            </a>
+            <a href="{% url 'kitchen_dashboard' %}" target="_blank" class="flex items-center gap-3 px-4 py-3 text-gray-600 hover:bg-gray-50 rounded-lg transition">
+                <span>👨‍🍳</span> จอครัว (KDS)
+            </a>
+            <a href="{% url 'cashier_dashboard' %}" class="flex items-center gap-3 px-4 py-3 text-gray-600 hover:bg-gray-50 rounded-lg transition">
+                <span>🖥️</span> แคชเชียร์ (POS)
+            </a>
+            <a href="{% url 'report_sales' %}" class="flex items-center gap-3 px-4 py-3 text-gray-600 hover:bg-gray-50 rounded-lg transition">
+                <span>📊</span> รายงานยอดขาย
+            </a>
+            <div class="border-t my-2"></div>
+            <a href="{% url 'restaurant_settings' %}" class="flex items-center gap-3 px-4 py-3 text-gray-600 hover:bg-gray-50 rounded-lg transition">
+                <span>⚙️</span> ตั้งค่าร้านค้า
+            </a>
         </nav>
     </aside>
 
     <main class="flex-1">
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-            <div class="bg-white p-6 rounded-lg shadow border-l-4 border-green-500">
-                <p class="text-gray-500 text-sm">ยอดขายวันนี้</p>
-                <p class="text-2xl font-bold text-gray-800">฿0.00</p>
+        <div class="mb-8 flex justify-between items-end">
+            <div>
+                <h2 class="text-2xl font-bold text-gray-800">สวัสดี, {{ user.first_name|default:user.email }} 👋</h2>
+                <p class="text-gray-500">นี่คือสรุปภาพรวมร้านของคุณในวันนี้</p>
             </div>
-            <div class="bg-white p-6 rounded-lg shadow border-l-4 border-blue-500">
-                <p class="text-gray-500 text-sm">ออเดอร์ที่กำลังทำ</p>
-                <p class="text-2xl font-bold text-gray-800">0 รายการ</p>
-            </div>
-            <div class="bg-white p-6 rounded-lg shadow border-l-4 border-orange-500">
-                <p class="text-gray-500 text-sm">โต๊ะที่เปิดอยู่</p>
-                <p class="text-2xl font-bold text-gray-800">0 โต๊ะ</p>
-            </div>
+            <span class="text-sm bg-gray-100 px-3 py-1 rounded-full text-gray-600">
+                📅 {% now "d F Y" %}
+            </span>
         </div>
 
-        <div class="bg-white rounded-lg shadow p-6">
-            <h2 class="text-xl text-gray-900 font-bold mb-4">ยินดีต้อนรับสู่ RPOS Dashboard</h2>
-            <p class="text-gray-600">
-                ระบบจัดการร้านอาหารของคุณพร้อมใช้งานแล้ว <br>
-                เริ่มจากการ <strong>เพิ่มโต๊ะ</strong> และ <strong>สร้างเมนูอาหาร</strong> ที่แถบเมนูด้านซ้ายได้เลย
-            </p>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <p class="text-sm text-gray-500 mb-1">ยอดขายวันนี้</p>
+                        <h3 class="text-2xl font-bold text-green-600">฿{{ today_sales|floatformat:0 }}</h3>
+                    </div>
+                    <div class="p-2 bg-green-50 rounded-lg text-green-600">💰</div>
+                </div>
+            </div>
+
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <p class="text-sm text-gray-500 mb-1">ออเดอร์วันนี้</p>
+                        <h3 class="text-2xl font-bold text-gray-800">{{ today_orders_count }}</h3>
+                    </div>
+                    <div class="p-2 bg-blue-50 rounded-lg text-blue-600">🧾</div>
+                </div>
+            </div>
+
+            <a href="{% url 'kitchen_dashboard' %}" target="_blank" class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition group">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <p class="text-sm text-gray-500 mb-1">รอครัวทำ</p>
+                        <h3 class="text-2xl font-bold text-orange-500 group-hover:text-orange-600">{{ pending_orders_count }}</h3>
+                    </div>
+                    <div class="p-2 bg-orange-50 rounded-lg text-orange-500">🔥</div>
+                </div>
+            </a>
+
+            <a href="{% url 'cashier_dashboard' %}" class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition group">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <p class="text-sm text-gray-500 mb-1">ลูกค้ากำลังทาน</p>
+                        <h3 class="text-2xl font-bold text-purple-600 group-hover:text-purple-700">{{ active_tables_count }} <span class="text-sm font-normal text-gray-400">โต๊ะ</span></h3>
+                    </div>
+                    <div class="p-2 bg-purple-50 rounded-lg text-purple-600">🍽️</div>
+                </div>
+            </a>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+            <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center">
+                <h3 class="font-bold text-gray-800">รายการล่าสุด</h3>
+                <a href="{% url 'cashier_dashboard' %}" class="text-sm text-blue-600 hover:underline">ไปหน้าแคชเชียร์ &rarr;</a>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm text-left">
+                    <thead class="bg-gray-50 text-gray-500">
+                        <tr>
+                            <th class="px-6 py-3">เวลา</th>
+                            <th class="px-6 py-3">โต๊ะ</th>
+                            <th class="px-6 py-3">ยอดเงิน</th>
+                            <th class="px-6 py-3">สถานะ</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-100">
+                        {% for order in recent_orders %}
+                        <tr class="hover:bg-gray-50">
+                            <td class="px-6 py-4 text-gray-500">{{ order.created_at|date:"H:i" }}</td>
+                            <td class="px-6 py-4 font-medium text-gray-800">{{ order.table.name }}</td>
+                            <td class="px-6 py-4 text-gray-800">฿{{ order.total_price }}</td>
+                            <td class="px-6 py-4">
+                                <span class="px-2 py-1 rounded-full text-xs font-bold
+                                    {% if order.is_paid %}bg-green-100 text-green-700
+                                    {% elif order.status == 'CANCELLED' %}bg-red-100 text-red-700
+                                    {% else %}bg-yellow-100 text-yellow-700{% endif %}">
+                                    {% if order.is_paid %}จ่ายแล้ว{% else %}{{ order.get_status_display }}{% endif %}
+                                </span>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="4" class="px-6 py-8 text-center text-gray-400">ยังไม่มีรายการวันนี้</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
         </div>
     </main>
 </div>
