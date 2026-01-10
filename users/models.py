@@ -10,6 +10,7 @@ class User(AbstractUser):
         ('REJECTED', 'ไม่อนุมัติ'),
         ('SUSPENDED', 'ระงับการใช้งาน'),
     ]
+    email = models.EmailField(unique=True, verbose_name='Email Address')
     
     # User Types (เผื่ออนาคตอยากแยก Role ชัดเจนในระดับ Model)
     is_shop_owner = models.BooleanField(default=False, verbose_name="เป็นเจ้าของร้าน")

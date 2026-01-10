@@ -1,5 +1,6 @@
 from django import forms
 from .models import Restaurant, Category, MenuItem
+from users.models import User
 
 class RestaurantForm(forms.ModelForm):
     class Meta:
@@ -65,24 +66,57 @@ class MenuItemForm(forms.ModelForm):
 
 # setting form of retaurants
 class RestaurantSettingsForm(forms.ModelForm):
+    username = forms.CharField(
+        label='ชื่อผู้ใช้ (Username)',
+        max_length=150,
+        required=True,
+        help_text='ใช้สำหรับอ้างอิงในระบบ (ต้องไม่ซ้ำกับคนอื่น)'
+    )
     class Meta:
         model = Restaurant
-        fields = ['name', 'address', 'phone', 'vat_percent', 'service_charge_percent']
+        fields = ['image', 'name', 'address', 'phone', 'vat_percent', 'service_charge_percent']
         labels = {
+            'image': 'โลโก้ร้านค้า',
             'name': 'ชื่อร้านค้า',
             'address': 'ที่อยู่',
             'phone': 'เบอร์โทรศัพท์ติดต่อ',
             'vat_percent': 'ภาษีมูลค่าเพิ่ม (VAT %)',
             'service_charge_percent': 'ค่าบริการ (Service Charge %)'
         }
+        
         widgets = {
             'address': forms.Textarea(attrs={'rows': 3}),
+            # เพิ่ม class ให้ file input
+            'image': forms.ClearableFileInput(attrs={
+                'class': 'block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100'
+            })
         }
 
+    # รับ user เข้ามาเพื่อดึงค่า username ปัจจุบันไปแสดง
     def __init__(self, *args, **kwargs):
+        self.user = kwargs.pop('user', None)
         super().__init__(*args, **kwargs)
-        # จัด Style ให้สวยงามด้วย Tailwind
-        for field in self.fields.values():
-            field.widget.attrs.update({
-                'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition'
-            })
+        
+        # จัด Style Tailwind ให้ field username
+        self.fields['username'].widget.attrs.update({
+            'class': 'w-full px-4 py-2 text-gray-400 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition'
+        })
+        
+        # ใส่ค่าเดิมลงไปในช่อง
+        if self.user:
+            self.fields['username'].initial = self.user.username
+        
+        # จัด Style ให้ field อื่นๆ
+        for name, field in self.fields.items():
+            if name != 'image': # ข้าม image เพราะ style มันต่างจาก text input
+                field.widget.attrs.update({
+                    'class': 'w-full px-4 text-gray-400 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition'
+                })
+
+    # ฟังก์ชันตรวจสอบความถูกต้อง (Clean)
+    def clean_username(self):
+        username = self.cleaned_data['username']
+        # เช็คว่าชื่อซ้ำคนอื่นไหม (ยกเว้นตัวเอง)
+        if User.objects.filter(username=username).exclude(pk=self.instance.owner.pk).exists():
+            raise forms.ValidationError("ชื่อผู้ใช้นี้มีผู้ใช้งานแล้ว กรุณาเปลี่ยนชื่อใหม่")
+        return username

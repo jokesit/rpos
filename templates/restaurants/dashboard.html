@@ -5,10 +5,16 @@
     
     <aside class="w-full md:w-64 bg-white rounded-xl shadow-sm border border-gray-100 p-6 h-fit shrink-0">
         <div class="text-center mb-6">
-            <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3 text-2xl">
-                🏪
-            </div>
-            <h3 class="font-bold text-gray-800 text-lg">{{ restaurant.name }}</h3>
+            {% if restaurant.image %}
+                <img src="{{ restaurant.image.url }}" 
+                    alt="{{ restaurant.name }}" 
+                    class="w-24 h-24 rounded-full mx-auto mb-3 object-cover border-4 border-blue-50 shadow-md">
+            {% else %}
+                <div class="w-24 h-24 bg-linear-to-br from-blue-100 to-blue-200 rounded-full flex items-center justify-center mx-auto mb-3 text-4xl shadow-inner text-blue-500">
+                    🏪
+                </div>
+            {% endif %}
+            <h3 class="font-bold text-gray-800 text-lg mt-2">{{ restaurant.name }}</h3>
             <p class="text-xs text-gray-500">Owner Dashboard</p>
         </div>
         <nav class="space-y-1">
@@ -108,7 +114,7 @@
                     <tbody class="divide-y divide-gray-100">
                         {% for order in recent_orders %}
                         <tr class="hover:bg-gray-50">
-                            <td class="px-6 py-4 text-gray-500">{{ order.created_at|date:"H:i" }}</td>
+                            <td class="px-6 py-4 text-gray-500">{{ order.created_at|date:"d/m/Y @ H:i" }}</td>
                             <td class="px-6 py-4 font-medium text-gray-800">{{ order.table.name }}</td>
                             <td class="px-6 py-4 text-gray-800">฿{{ order.total_price }}</td>
                             <td class="px-6 py-4">

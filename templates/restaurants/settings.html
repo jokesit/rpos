@@ -5,35 +5,64 @@
     
     <aside class="w-full md:w-64 bg-white rounded-xl shadow-sm border border-gray-100 p-6 h-fit shrink-0">
         <div class="text-center mb-6">
+            {% if restaurant.image %}
+                <img src="{{ restaurant.image.url }}" class="w-20 h-20 rounded-full mx-auto mb-3 object-cover border-2 border-blue-100 shadow-sm">
+            {% else %}
+                <div class="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3 text-2xl">🏪</div>
+            {% endif %}
             <h3 class="font-bold text-gray-800 text-lg">{{ restaurant.name }}</h3>
         </div>
-        <nav class="space-y-1">
-            <a href="{% url 'dashboard' %}" class="flex items-center gap-3 px-4 py-3 text-gray-600 hover:bg-gray-50 rounded-lg transition">
-                <span>🏠</span> ภาพรวม
-            </a>
-            <a href="{% url 'restaurant_settings' %}" class="flex items-center gap-3 px-4 py-3 bg-blue-50 text-blue-700 font-bold rounded-lg transition">
-                <span>⚙️</span> ตั้งค่าร้านค้า
-            </a>
-        </nav>
-    </aside>
+        </aside>
 
     <main class="flex-1">
-        <div class="max-w-2xl bg-white rounded-xl shadow-sm border border-gray-100 p-8">
+        <div class="max-w-3xl bg-white rounded-xl shadow-sm border border-gray-100 p-8">
             <h2 class="text-2xl font-bold text-gray-800 mb-6">⚙️ ตั้งค่าร้านค้า</h2>
             
             <form method="post" enctype="multipart/form-data">
                 {% csrf_token %}
                 
+                <div class="mb-8 flex flex-col items-center sm:flex-row gap-6 p-6 bg-gray-50 rounded-xl border border-dashed border-gray-300">
+                    <div class="shrink-0 relative">
+                        {% if restaurant.image %}
+                            <img id="image-preview" src="{{ restaurant.image.url }}" class="h-32 w-32 object-cover rounded-lg shadow-md bg-white">
+                        {% else %}
+                            <img id="image-preview" src="https://via.placeholder.com/150?text=No+Logo" class="h-32 w-32 object-cover rounded-lg shadow-md bg-white opacity-50">
+                        {% endif %}
+                    </div>
+                    
+                    <div class="flex-1 w-full text-gray-500">
+                        <label class="block text-sm font-bold text-gray-700 mb-2">โลโก้ร้านค้า</label>
+                        <p class="text-xs text-gray-500 mb-3">แนะนำขนาด 800x800 px (รองรับ JPG, PNG)</p>
+                        
+                        {{ form.image }}
+                        
+                        {% if form.image.errors %}
+                            <p class="text-red-500 text-xs mt-1">{{ form.image.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <h3 class="text-lg font-bold text-gray-700 mb-4 border-b pb-2">ข้อมูลบัญชีผู้ใช้</h3>
+                <div class="mb-6">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">ชื่อผู้ใช้ (Username)</label>
+                    {{ form.username }}
+                    {% if form.username.errors %}
+                        <p class="text-red-500 text-xs mt-1">{{ form.username.errors.0 }}</p>
+                    {% endif %}
+                </div>
+
                 <h3 class="text-lg font-bold text-gray-700 mb-4 border-b pb-2">ข้อมูลทั่วไป</h3>
                 <div class="space-y-4 mb-8">
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">ชื่อร้านค้า</label>
                         {{ form.name }}
                     </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">เบอร์โทรศัพท์</label>
-                        {{ form.phone }}
-                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">เบอร์โทรศัพท์</label>
+                            {{ form.phone }}
+                        </div>
+                        </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">ที่อยู่</label>
                         {{ form.address }}
@@ -45,12 +74,10 @@
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">VAT (%)</label>
                         {{ form.vat_percent }}
-                        <p class="text-xs text-gray-500 mt-1">ใส่ 0 หากไม่มี VAT</p>
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">Service Charge (%)</label>
                         {{ form.service_charge_percent }}
-                        <p class="text-xs text-gray-500 mt-1">ใส่ 0 หากไม่มีค่าบริการ</p>
                     </div>
                 </div>
 
@@ -63,4 +90,23 @@
         </div>
     </main>
 </div>
+
+<script>
+    const imageInput = document.querySelector('input[type="file"]');
+    const imagePreview = document.getElementById('image-preview');
+
+    if (imageInput) {
+        imageInput.addEventListener('change', function(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    imagePreview.src = e.target.result;
+                    imagePreview.classList.remove('opacity-50'); // เอากรณี no-logo ออก
+                }
+                reader.readAsDataURL(file);
+            }
+        });
+    }
+</script>
 {% endblock %}

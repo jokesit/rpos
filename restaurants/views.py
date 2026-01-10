@@ -1,18 +1,31 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
-from .models import Restaurant, Table, Category, MenuItem # import เพิ่ม
+from .models import Table, Category, MenuItem 
 from .forms import RestaurantForm, CategoryForm, MenuItemForm, RestaurantSettingsForm
-from django.db.models import Sum, Count, Q
+from django.db.models import Sum, Count
 from django.db.models.functions import TruncDate
 from decimal import Decimal
 from django.utils import timezone
+from django.core.exceptions import ObjectDoesNotExist
 
 
 # for show owner
 @login_required
 def dashboard(request):
-    restaurant = request.user.restaurant
+    # เช็คว่าเป็น Superuser หรือไม่?
+    if request.user.is_superuser:
+        # ถ้าใช่ ให้ไปหน้า Admin Panel ของ Django เลย
+        return redirect('/adminsuperuser/')
+    
+    # 2. เช็คว่า User นี้มีร้านค้าหรือยัง?
+    try:
+        restaurant = request.user.restaurant
+    except ObjectDoesNotExist:
+        # ถ้ายังไม่มีร้าน ให้ไปหน้าสร้างร้าน (เดี๋ยวเราสร้าง view นี้ในขั้นตอนต่อไป)
+        return redirect('create_restaurant')
+    
+
     today = timezone.now().date()
 
     # 1. ยอดขายวันนี้ (เฉพาะที่จ่ายเงินแล้ว)
@@ -377,13 +390,25 @@ def restaurant_settings(request):
     restaurant = request.user.restaurant
     
     if request.method == 'POST':
-        form = RestaurantSettingsForm(request.POST, request.FILES, instance=restaurant)
+        # ส่ง request.user ไปให้ Form ด้วย
+        form = RestaurantSettingsForm(request.POST, request.FILES, instance=restaurant, user=request.user)
+        
         if form.is_valid():
+            # 1. บันทึกข้อมูลร้านค้า (Restaurant)
             form.save()
-            messages.success(request, 'บันทึกการตั้งค่าเรียบร้อยแล้ว')
+            
+            # 2. บันทึกข้อมูล Username (User)
+            new_username = form.cleaned_data['username']
+            user = request.user
+            if user.username != new_username:
+                user.username = new_username
+                user.save()
+            
+            messages.success(request, 'บันทึกการตั้งค่าและชื่อผู้ใช้เรียบร้อยแล้ว')
             return redirect('restaurant_settings')
     else:
-        form = RestaurantSettingsForm(instance=restaurant)
+        # ส่ง request.user ไปให้ Form เพื่อแสดงค่าเริ่มต้น
+        form = RestaurantSettingsForm(instance=restaurant, user=request.user)
         
     return render(request, 'restaurants/settings.html', {
         'form': form,

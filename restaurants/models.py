@@ -3,6 +3,7 @@ from django.conf import settings # เพื่ออ้างอิง User mod
 from django.utils.text import slugify
 import uuid
 import segno
+from utils import compress_image
 
 class Restaurant(models.Model):
     # เชื่อมกับ User: ถ้า User ถูกลบ ร้านหายไปด้วย (CASCADE)
@@ -11,6 +12,9 @@ class Restaurant(models.Model):
     
     name = models.CharField(max_length=255, verbose_name="ชื่อร้าน")
     
+    # field รูปภาพร้านค้า
+    image = models.ImageField(upload_to='restaurant_images/', blank=True, null=True, verbose_name="รูปร้านค้า/โลโก้")
+
     # Slug เอาไว้ทำ URL สวยๆ เช่น rpos.com/shop/my-coffee-shop/
     slug = models.SlugField(unique=True, blank=True, null=True) 
     
@@ -38,6 +42,16 @@ class Restaurant(models.Model):
             
             # ตรวจสอบซ้ำ (กันเหนียว)
             self.slug = base_slug
+
+        if self.image:
+            try:
+                # เรียกใช้ฟังก์ชันจาก utils.py (ขนาด 800x800)
+                new_image = compress_image(self.image, max_size=(800, 800))
+                if new_image:
+                    self.image = new_image
+            except Exception as e:
+                # กรณี Error (เช่น ไฟล์ไม่ใช่รูป) ให้ข้ามไป ไม่ต้องย่อ
+                print(f"Image compression failed: {e}")
             
         super().save(*args, **kwargs)
 
@@ -63,10 +77,10 @@ class Table(models.Model):
         return f"{self.restaurant.name} - {self.name}"
 
     def get_order_url(self):
-        # สร้าง URL สำหรับลูกค้า (เดี๋ยวเราค่อยไปสร้าง View นี้ใน Phase ถัดไป)
-        # รูปแบบ: domain.com/dining/<shop_slug>/<table_uuid>/
-        # ตอนนี้ใช้ localhost ไปก่อน
-        domain = "http://127.0.0.1:8000" 
+        # พยายามดึง Domain จาก settings ถ้าไม่มีใช้ localhost
+        domain = getattr(settings, 'DOMAIN_URL', 'http://127.0.0.1:8000')
+        # ลบ slash ท้าย domain ออกถ้ามี เพื่อความชัวร์
+        domain = domain.rstrip('/')
         return f"{domain}/dining/{self.restaurant.slug}/{self.uuid}/"
 
     def get_qr_image(self):
@@ -101,3 +115,16 @@ class MenuItem(models.Model):
 
     def __str__(self):
         return self.name
+    
+    # ⭐ เพิ่ม method save เพื่อย่อรูปอาหาร
+    def save(self, *args, **kwargs):
+        if self.image:
+            try:
+                # รูปอาหารเอาขนาด 600x600 พอดีจอมือถือ
+                new_image = compress_image(self.image, max_size=(600, 600))
+                if new_image:
+                    self.image = new_image
+            except Exception as e:
+                print(f"Menu image compression failed: {e}")
+                
+        super().save(*args, **kwargs)

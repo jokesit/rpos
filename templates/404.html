@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="min-h-[70vh] flex flex-col items-center justify-center text-center px-4">
+    <div class="text-9xl font-extrabold text-gray-200">404</div>
+    
+    <div class="absolute mt-[-50px]">
+        <div class="bg-blue-100 p-4 rounded-full inline-block mb-4">
+            <span class="text-4xl">🤔</span>
+        </div>
+        <h1 class="text-3xl font-bold text-gray-800 mb-2">หาหน้านี้ไม่เจอ</h1>
+        <p class="text-gray-500 mb-8 max-w-md mx-auto">
+            ขออภัย เราไม่พบหน้าที่คุณกำลังค้นหา <br>
+            ลิงก์อาจถูกย้าย หรือคุณอาจพิมพ์ URL ผิด
+        </p>
+        
+        <div class="flex gap-4 justify-center">
+            <a href="javascript:history.back()" class="px-6 py-3 rounded-xl border border-gray-300 text-gray-600 font-bold hover:bg-gray-50 transition">
+                &larr; ย้อนกลับ
+            </a>
+            <a href="{% url 'home' %}" class="px-6 py-3 rounded-xl bg-blue-600 text-white font-bold hover:bg-blue-700 shadow-lg transition transform hover:-translate-y-1">
+                ไปหน้าหลัก
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}
