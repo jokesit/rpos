@@ -14,6 +14,9 @@ class Restaurant(models.Model):
     
     # field รูปภาพร้านค้า
     image = models.ImageField(upload_to='restaurant_images/', blank=True, null=True, verbose_name="รูปร้านค้า/โลโก้")
+    
+    # เพิ่มรูป Payment QR Code
+    payment_qr_image = models.ImageField(upload_to='payment_qrs/', blank=True, null=True, verbose_name="QR Code รับเงิน (ธนาคาร)")
 
     # Slug เอาไว้ทำ URL สวยๆ เช่น rpos.com/shop/my-coffee-shop/
     slug = models.SlugField(unique=True, blank=True, null=True) 
@@ -50,6 +53,16 @@ class Restaurant(models.Model):
                 if new_image:
                     self.image = new_image
             except Exception as e:
+                # กรณี Error (เช่น ไฟล์ไม่ใช่รูป) ให้ข้ามไป ไม่ต้องย่อ
+                print(f"Image compression failed: {e}")
+
+        # เพิ่ม Logic ย่อรูป Payment QR
+        if self.payment_qr_image:
+            try:
+                new_image = compress_image(self.payment_qr_image, max_size=(500, 500))
+                if new_image:
+                    self.payment_qr_image = new_image
+            except Exception:
                 # กรณี Error (เช่น ไฟล์ไม่ใช่รูป) ให้ข้ามไป ไม่ต้องย่อ
                 print(f"Image compression failed: {e}")
             
@@ -127,4 +140,23 @@ class MenuItem(models.Model):
             except Exception as e:
                 print(f"Menu image compression failed: {e}")
                 
+        super().save(*args, **kwargs)
+
+
+
+# สร้าง Model สำหรับรูปสไลด์โชว์ (Promotion Images)
+class RestaurantPromoImage(models.Model):
+    restaurant = models.ForeignKey(Restaurant, on_delete=models.CASCADE, related_name='promo_images')
+    image = models.ImageField(upload_to='promo_images/', verbose_name="รูปโปรโมชั่น/เมนูแนะนำ")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def save(self, *args, **kwargs):
+        if self.image:
+            try:
+                # รูปสไลด์โชว์ควรชัดหน่อย เอาสัก 1280x720 หรือ 1920x1080
+                new_image = compress_image(self.image, max_size=(1280, 720))
+                if new_image:
+                    self.image = new_image
+            except Exception:
+                pass
         super().save(*args, **kwargs)

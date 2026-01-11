@@ -1,8 +1,8 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
-from .models import Table, Category, MenuItem 
-from .forms import RestaurantForm, CategoryForm, MenuItemForm, RestaurantSettingsForm
+from .models import Table, Category, MenuItem, Restaurant
+from .forms import RestaurantForm, CategoryForm, MenuItemForm, RestaurantSettingsForm, PromoImageFormSet
 from django.db.models import Sum, Count
 from django.db.models.functions import TruncDate
 from decimal import Decimal
@@ -392,10 +392,13 @@ def restaurant_settings(request):
     if request.method == 'POST':
         # ส่ง request.user ไปให้ Form ด้วย
         form = RestaurantSettingsForm(request.POST, request.FILES, instance=restaurant, user=request.user)
+        # รับค่า Formset
+        formset = PromoImageFormSet(request.POST, request.FILES, instance=restaurant)
         
-        if form.is_valid():
+        if form.is_valid() and formset.is_valid():
             # 1. บันทึกข้อมูลร้านค้า (Restaurant)
             form.save()
+            formset.save() # บันทึกรูปสไลด์
             
             # 2. บันทึกข้อมูล Username (User)
             new_username = form.cleaned_data['username']
@@ -409,13 +412,24 @@ def restaurant_settings(request):
     else:
         # ส่ง request.user ไปให้ Form เพื่อแสดงค่าเริ่มต้น
         form = RestaurantSettingsForm(instance=restaurant, user=request.user)
+        formset = PromoImageFormSet(instance=restaurant)
         
     return render(request, 'restaurants/settings.html', {
         'form': form,
+        'formset': formset, # ส่งไป template
         'restaurant': restaurant
     })
 
 
 # -------
 
+
+@login_required
+def customer_facing_display(request, restaurant_slug):
+    restaurant = get_object_or_404(Restaurant, slug=restaurant_slug)
+    promo_images = restaurant.promo_images.all().order_by('-created_at')
+    return render(request, 'restaurants/customer_display.html', {
+        'restaurant': restaurant,
+        'promo_images': promo_images,
+    })
 

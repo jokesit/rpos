@@ -12,7 +12,7 @@
             {% endif %}
             <h3 class="font-bold text-gray-800 text-lg">{{ restaurant.name }}</h3>
         </div>
-        </aside>
+    </aside>
 
     <main class="flex-1">
         <div class="max-w-3xl bg-white rounded-xl shadow-sm border border-gray-100 p-8">
@@ -69,6 +69,95 @@
                     </div>
                 </div>
 
+                <div class="mb-8 p-6 bg-blue-50 rounded-xl border border-dashed border-blue-300">
+                    <h3 class="font-bold text-gray-700 mb-4">QR Code รับเงิน (สำหรับลูกค้าสแกน)</h3>
+                    
+                    <label for="id_payment_qr_image" class="cursor-pointer group flex flex-col sm:flex-row items-center gap-6 relative">
+                        
+                        <div class="shrink-0 relative">
+                            {% if restaurant.payment_qr_image %}
+                                <img id="qr-preview" src="{{ restaurant.payment_qr_image.url }}" class="h-40 w-40 object-contain rounded-lg border-2 border-white shadow-md bg-white group-hover:opacity-80 transition">
+                            {% else %}
+                                <div id="qr-placeholder" class="h-40 w-40 flex flex-col items-center justify-center bg-white rounded-lg border-2 border-dashed border-gray-300 text-gray-400 group-hover:bg-gray-50 transition">
+                                    <span class="text-3xl mb-1">📷</span>
+                                    <span class="text-xs text-center px-2">คลิกเพื่อเพิ่มรูป</span>
+                                </div>
+                                <img id="qr-preview" class="hidden h-40 w-40 object-contain rounded-lg border-2 border-white shadow-md bg-white">
+                            {% endif %}
+                            
+                            <div class="absolute -bottom-2.5 -right-2.5 bg-blue-600 text-white p-2 rounded-full shadow-lg group-hover:scale-110 transition">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                                </svg>
+                            </div>
+                        </div>
+
+                        <div class="flex-1 w-full">
+                            <span class="block text-sm font-bold text-gray-700 mb-2 group-hover:text-blue-600">อัปโหลดรูป QR Code</span>
+                            <p class="text-xs text-gray-500 mb-3">แตะที่รูปหรือข้อความนี้เพื่อเลือกไฟล์ (ระบบจะย่อรูปให้อัตโนมัติ)</p>
+                            
+                            {{ form.payment_qr_image }}
+                            
+                            {% if form.payment_qr_image.errors %}
+                                <p class="text-red-500 text-xs mt-1">{{ form.payment_qr_image.errors.0 }}</p>
+                            {% endif %}
+                        </div>
+
+                    </label> 
+                </div>
+
+                <h3 class="text-lg font-bold text-gray-700 mb-4 border-b pb-2">รูปภาพเมนูแนะนำ (สูงสุด 10 รูป)</h3>
+
+                    {{ formset.management_form }}
+
+                    <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
+                        {% for form in formset %}
+                            <div class="hidden">
+                                {{ form.id }}
+                                {{ form.DELETE }} </div>
+
+                            <div class="relative group w-full aspect-square">
+                                
+                                <label for="{{ form.image.id_for_label }}" class="cursor-pointer block w-full h-full relative rounded-xl border-2 border-dashed border-gray-300 hover:border-blue-500 overflow-hidden bg-gray-50 transition hover:shadow-md">
+                                    
+                                    <input type="file" 
+                                        name="{{ form.image.html_name }}" 
+                                        id="{{ form.image.id_for_label }}" 
+                                        accept="image/*"
+                                        class="hidden promo-file-input"
+                                        data-index="{{ forloop.counter0 }}">
+
+                                    <div class="w-full h-full absolute inset-0 z-10 {% if not form.instance.image %}hidden{% endif %}" id="preview-box-{{ forloop.counter0 }}">
+                                        {% if form.instance.image %}
+                                            <img src="{{ form.instance.image.url }}" class="w-full h-full object-cover">
+                                        {% else %}
+                                            <img src="" class="w-full h-full object-cover"> {% endif %}
+                                    </div>
+
+                                    <div class="w-full h-full flex flex-col items-center justify-center text-gray-400 group-hover:text-blue-500 transition z-0" id="placeholder-box-{{ forloop.counter0 }}">
+                                        <span class="text-3xl mb-1">➕</span>
+                                        <span class="text-xs">เพิ่มรูป</span>
+                                    </div>
+                                </label>
+
+                                <button type="button" 
+                                        onclick="deletePromoImage('{{ forloop.counter0 }}')"
+                                        class="absolute top-2 right-2 z-20 bg-red-500 text-white p-1.5 rounded-full shadow-md hover:bg-red-600 transition opacity-0 group-hover:opacity-100 {% if not form.instance.image %}hidden{% endif %}"
+                                        id="delete-btn-{{ forloop.counter0 }}">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                    </svg>
+                                </button>
+                                
+                                <div id="deleted-overlay-{{ forloop.counter0 }}" class="hidden absolute inset-0 z-30 bg-red-100/90 flex-col items-center justify-center text-red-600 rounded-xl border-2 border-red-500">
+                                    <span class="font-bold text-sm">เตรียมลบ</span>
+                                    <button type="button" onclick="undoDelete('{{ forloop.counter0 }}')" class="mt-1 text-xs underline text-red-800">ยกเลิก</button>
+                                </div>
+
+                            </div>
+                        {% endfor %}
+                    </div>
+
                 <h3 class="text-lg font-bold text-gray-700 mb-4 border-b pb-2">การเงิน & ภาษี</h3>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
                     <div>
@@ -92,21 +181,100 @@
 </div>
 
 <script>
-    const imageInput = document.querySelector('input[type="file"]');
-    const imagePreview = document.getElementById('image-preview');
+    function setupImagePreview(inputId, previewId, placeholderId = null) {
+        const input = document.getElementById(inputId); 
+        const preview = document.getElementById(previewId);
+        const placeholder = placeholderId ? document.getElementById(placeholderId) : null;
 
-    if (imageInput) {
-        imageInput.addEventListener('change', function(event) {
-            const file = event.target.files[0];
+        if (input) {
+            input.addEventListener('change', function(event) {
+                const file = event.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        preview.src = e.target.result;
+                        preview.classList.remove('opacity-50', 'hidden'); 
+                        
+                        if (placeholder) {
+                            placeholder.classList.add('hidden');
+                        }
+                    }
+                    reader.readAsDataURL(file);
+                }
+            });
+        } else {
+            // Debug: ถ้ายังกดไม่ได้ ให้ดู Console ว่าขึ้น Error นี้ไหม
+            console.error("❌ หา Input ไม่เจอ: " + inputId); 
+            console.log("ตรวจสอบ forms.py ว่ามี field นี้หรือไม่");
+        }
+    }
+
+    // เรียกใช้งาน
+    // 1. Logo (field: image -> id_image)
+    setupImagePreview('id_image', 'image-preview');
+
+    // 2. QR Code (field: payment_qr_image -> id_payment_qr_image)
+    setupImagePreview('id_payment_qr_image', 'qr-preview', 'qr-placeholder');
+
+
+    // 1. จัดการการเลือกไฟล์และโชว์ Preview
+    document.querySelectorAll('.promo-file-input').forEach(input => {
+        input.addEventListener('change', function(e) {
+            const index = this.dataset.index;
+            const file = e.target.files[0];
+            const previewBox = document.getElementById(`preview-box-${index}`);
+            const deleteBtn = document.getElementById(`delete-btn-${index}`);
+            const imgTag = previewBox.querySelector('img');
+
             if (file) {
                 const reader = new FileReader();
-                reader.onload = function(e) {
-                    imagePreview.src = e.target.result;
-                    imagePreview.classList.remove('opacity-50'); // เอากรณี no-logo ออก
+                reader.onload = function(evt) {
+                    imgTag.src = evt.target.result;
+                    previewBox.classList.remove('hidden'); // โชว์รูป
+                    deleteBtn.classList.remove('hidden'); // โชว์ปุ่มลบ
                 }
                 reader.readAsDataURL(file);
             }
         });
+    });
+
+    // 2. ฟังก์ชันลบรูป (กดถังขยะ)
+    function deletePromoImage(index) {
+        // หา Elements ที่เกี่ยวข้อง
+        const previewBox = document.getElementById(`preview-box-${index}`);
+        const deleteBtn = document.getElementById(`delete-btn-${index}`);
+        const input = document.getElementById(`id_promo_images-${index}-image`);
+        const deleteCheckbox = document.getElementById(`id_promo_images-${index}-DELETE`);
+        const overlay = document.getElementById(`deleted-overlay-${index}`);
+
+        // กรณี A: เป็นรูปที่มีอยู่แล้วในระบบ (Saved Image)
+        if (deleteCheckbox) {
+            // ติ๊กถูกที่ checkbox DELETE ของ Django
+            deleteCheckbox.checked = true;
+            // โชว์ Overlay ว่า "เตรียมลบ"
+            overlay.classList.remove('hidden');
+        } 
+        
+        // กรณี B: เป็นรูปใหม่ที่เพิ่งเลือก (ยังไม่ได้ Save)
+        else {
+            // เคลียร์ค่า input file
+            input.value = ''; 
+            // ซ่อน Preview กลับไปโชว์ Placeholder
+            previewBox.classList.add('hidden');
+            previewBox.querySelector('img').src = '';
+            deleteBtn.classList.add('hidden');
+        }
+    }
+
+    // 3. ฟังก์ชันยกเลิกการลบ (Undo)
+    function undoDelete(index) {
+        const deleteCheckbox = document.getElementById(`id_promo_images-${index}-DELETE`);
+        const overlay = document.getElementById(`deleted-overlay-${index}`);
+        
+        if (deleteCheckbox) {
+            deleteCheckbox.checked = false; // เอาติ๊กถูกออก
+            overlay.classList.add('hidden'); // ซ่อน Overlay
+        }
     }
 </script>
 {% endblock %}

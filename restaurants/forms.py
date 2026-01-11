@@ -1,11 +1,12 @@
 from django import forms
-from .models import Restaurant, Category, MenuItem
+from .models import Restaurant, Category, MenuItem, RestaurantPromoImage
 from users.models import User
+from django.forms import inlineformset_factory
 
 class RestaurantForm(forms.ModelForm):
     class Meta:
         model = Restaurant
-        fields = ['name', 'phone', 'address', 'vat_percent', 'service_charge_percent']
+        fields = ['image', 'payment_qr_image', 'name', 'phone', 'address', 'vat_percent', 'service_charge_percent']
         labels = {
             'name': 'ชื่อร้าน',
             'phone': 'เบอร์โทรศัพท์',
@@ -24,6 +25,25 @@ class RestaurantForm(forms.ModelForm):
             # ปรับแต่งเพิ่มเติมเฉพาะ field ถ้าต้องการ
             if field_name == 'address':
                 field.widget.attrs.update({'rows': 3})
+
+
+
+# 2. สร้าง Formset สำหรับรูปสไลด์โชว์
+
+PromoImageFormSet = inlineformset_factory(
+    Restaurant, 
+    RestaurantPromoImage, 
+    fields=['image'], 
+    
+    # ⭐ จุดสำคัญ: ปรับ extra เป็น 10 เพื่อให้โชว์ช่องว่างรอไว้เลย
+    extra=10,    
+    max_num=10, 
+    
+    # ป้องกันไม่ให้สร้างเกิน 10 (ถ้ามีรูปเดิม 2 รูป + extra 10 = 12 Django จะตัดให้เหลือ 10 อัตโนมัติ)
+    validate_max=True,
+    can_delete=True
+)
+
 
 
 
@@ -74,9 +94,10 @@ class RestaurantSettingsForm(forms.ModelForm):
     )
     class Meta:
         model = Restaurant
-        fields = ['image', 'name', 'address', 'phone', 'vat_percent', 'service_charge_percent']
+        fields = ['image', 'payment_qr_image', 'name', 'address', 'phone', 'vat_percent', 'service_charge_percent']
         labels = {
             'image': 'โลโก้ร้านค้า',
+            'payment_qr_image': 'QR Code รับเงิน',
             'name': 'ชื่อร้านค้า',
             'address': 'ที่อยู่',
             'phone': 'เบอร์โทรศัพท์ติดต่อ',
@@ -86,9 +107,15 @@ class RestaurantSettingsForm(forms.ModelForm):
         
         widgets = {
             'address': forms.Textarea(attrs={'rows': 3}),
-            # เพิ่ม class ให้ file input
+            
+            # Style ของ Logo
             'image': forms.ClearableFileInput(attrs={
                 'class': 'block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100'
+            }),
+            
+            # ⭐ 2. เพิ่ม Style ให้ QR Code (หรือจะซ่อน class='hidden' ก็ได้ถ้าใช้ Label ครอบแล้ว)
+            'payment_qr_image': forms.ClearableFileInput(attrs={
+                'class': 'hidden' # ซ่อนไว้เพราะเรามี UI สวยๆ ใน HTML แล้ว
             })
         }
 
@@ -108,9 +135,10 @@ class RestaurantSettingsForm(forms.ModelForm):
         
         # จัด Style ให้ field อื่นๆ
         for name, field in self.fields.items():
-            if name != 'image': # ข้าม image เพราะ style มันต่างจาก text input
+            # เพิ่ม payment_qr_image เข้าไปในข้อยกเว้น เพราะเรา style แยกไว้ข้างบนแล้ว
+            if name not in ['image', 'payment_qr_image']: 
                 field.widget.attrs.update({
-                    'class': 'w-full px-4 text-gray-400 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition'
+                    'class': 'w-full px-4 text-gray-800 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition'
                 })
 
     # ฟังก์ชันตรวจสอบความถูกต้อง (Clean)

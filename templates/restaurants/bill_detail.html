@@ -53,7 +53,7 @@
 
         <div class="p-6 space-y-3 border-b border-dashed">
             <div class="flex justify-between text-gray-600">
-                <span>ยอดรวมสินค้ (Subtotal)</span>
+                <span>ยอดรวมสินค้า(Subtotal)</span>
                 <span>฿{{ subtotal|floatformat:2 }}</span>
             </div>
             
@@ -73,7 +73,18 @@
         </div>
 
         <div class="p-6 mt-auto">
-            <form method="post" action="{% url 'close_bill' table.id %}" onsubmit="return confirm('ยืนยันรับชำระเงิน? รายการจะถูกปิดทันที');">
+
+            <div class="grid grid-cols-2 gap-3 mb-6">
+                <button onclick="clearCustomerScreen()" type="button" 
+                    class="flex items-center justify-center gap-2 bg-gray-200 text-gray-700 py-3 rounded-xl hover:bg-gray-300 font-bold transition">
+                    📺 ปิดจอ
+                </button>
+                <button onclick="sendToCustomer()" type="button" 
+                    class="flex items-center justify-center gap-2 bg-indigo-600 text-white py-3 rounded-xl hover:bg-indigo-700 font-bold shadow-md transition animate-pulse">
+                    🚀 โชว์ยอดลูกค้า
+                </button>
+            </div>
+            <form method="post" action="{% url 'close_bill' table.id %}" onsubmit="if(confirm('ยืนยันรับชำระเงิน? รายการจะถูกปิดทันที')) { return handleCloseBill(event); } else { return false; }">
                 {% csrf_token %}
                 
                 <div class="mb-4">
@@ -93,6 +104,8 @@
                 🖨️ พิมพ์ใบเสร็จอย่างย่อ
             </button>
         </div>
+
+        
     </div>
 
 </div>
@@ -190,4 +203,82 @@
         <p>Powered by RPOS System</p>
     </div>
 </div>
+
+
+<div id="raw-order-data" style="display: none;">
+    {% for item in order_items %}
+    <div 
+        data-name="{{ item.menu_name }}" 
+        data-quantity="{{ item.quantity }}" 
+        data-price="฿{{ item.total|floatformat:2 }}"
+    ></div>
+    {% endfor %}
+</div>
+
+<script>
+    const restaurantId = "{{ restaurant.id|default:'' }}"; 
+    
+    // ตั้งค่า URL WebSocket
+    const wsScheme = window.location.protocol === "https:" ? "wss" : "ws";
+    const wsUrl = wsScheme + '://' + window.location.host + '/ws/restaurant/' + restaurantId + '/';
+    
+    let socket = new WebSocket(wsUrl);
+
+    socket.onopen = function () {
+        console.log("✅ WebSocket Connected!");
+    };
+
+    socket.onerror = function(error) {
+        console.error("❌ WebSocket Error:", error);
+    };
+
+    // ฟังก์ชันดึงข้อมูลจาก Hidden Div ด้านบน
+    function getOrderItems() {
+        const rawElements = document.querySelectorAll('#raw-order-data div');
+        return Array.from(rawElements).map(el => ({
+            name: el.getAttribute('data-name'),
+            quantity: parseInt(el.getAttribute('data-quantity')),
+            price: el.getAttribute('data-price')
+        }));
+    }
+
+    // 1. กดปุ่ม "โชว์ยอดลูกค้า"
+    window.sendToCustomer = function() {
+        if (!socket || socket.readyState !== WebSocket.OPEN) {
+            alert("⚠️ กำลังเชื่อมต่อระบบ... กรุณารอสักครู่");
+            return;
+        }
+
+        const items = getOrderItems();
+        const grandTotal = "{{ grand_total|floatformat:2 }}";
+
+        // ส่งข้อมูลผ่าน WebSocket
+        socket.send(JSON.stringify({
+            command: 'show_customer_payment',
+            items: items,
+            total: '฿' + grandTotal
+        }));
+        
+        console.log("Sent data to customer screen");
+    };
+
+    // 2. กดปุ่ม "ปิดจอ"
+    window.clearCustomerScreen = function() {
+        if (socket && socket.readyState === WebSocket.OPEN) {
+            socket.send(JSON.stringify({
+                command: 'hide_customer_payment'
+            }));
+        }
+    };
+
+    // 3. เมื่อกด "รับชำระเงิน" ให้ปิดจออัตโนมัติ
+    window.handleCloseBill = function(event) {
+        window.clearCustomerScreen();
+        return true;
+    };
+</script>
+
+
+
+
 {% endblock %}

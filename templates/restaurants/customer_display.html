@@ -1,0 +1,177 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <title>Customer Display - {{ restaurant.name }}</title>
+    <script src="https://cdn.tailwindcss.com"></script> 
+    <style>
+        body { overflow: hidden; background-color: black; }
+        .fade-in { animation: fadeIn 0.5s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        
+        /* Transition สำหรับรูปภาพ */
+        .slide-img {
+            transition: opacity 1.5s ease-in-out;
+        }
+    </style>
+</head>
+<body class="h-screen w-screen relative text-white font-sans">
+
+    <div id="screen-idle" class="absolute inset-0 bg-gray-900 z-10 overflow-hidden">
+        
+        <div id="slideshow-container" class="absolute inset-0 w-full h-full">
+            {% if promo_images %}
+                {% for promo in promo_images %}
+                    <img src="{{ promo.image.url }}" 
+                         class="slide-img absolute inset-0 w-full h-full object-cover opacity-0"
+                         alt="Menu Slide">
+                {% endfor %}
+            {% else %}
+                <div class="absolute inset-0 bg-linear-to-br from-gray-800 to-gray-900"></div>
+            {% endif %}
+        </div>
+
+        <div class="absolute inset-0 bg-black/40 z-10"></div>
+
+        <div class="absolute inset-0 flex flex-col items-center justify-center z-20">
+            {% if restaurant.image %}
+                <img src="{{ restaurant.image.url }}" class="w-32 h-32 rounded-full border-4 border-white shadow-lg mb-6 object-cover">
+            {% endif %}
+            
+            <h1 class="text-6xl font-bold mb-4 text-white drop-shadow-lg tracking-wide">{{ restaurant.name }}</h1>
+            <p class="text-3xl text-gray-200 drop-shadow-md">ยินดีต้อนรับ / Welcome</p>
+        </div>
+    </div>
+
+    <div id="screen-payment" class="hidden absolute inset-0 z-50 bg-white text-gray-800 flex-col fade-in">
+        <div class="bg-blue-600 text-white p-6 shadow-md flex justify-between items-center">
+            <h1 class="text-4xl font-bold">สรุปรายการชำระเงิน</h1>
+            <div class="text-xl opacity-80">{{ restaurant.name }}</div>
+        </div>
+
+        <div class="flex-1 flex overflow-hidden">
+            <div class="w-1/2 p-8 bg-gray-50 overflow-y-auto">
+                <table class="w-full text-2xl">
+                    <thead class="border-b-2 border-gray-300 text-gray-500">
+                        <tr>
+                            <th class="text-left py-4">รายการ</th>
+                            <th class="text-center py-4">จำนวน</th>
+                            <th class="text-right py-4">ราคา</th>
+                        </tr>
+                    </thead>
+                    <tbody id="order-items-list">
+                        </tbody>
+                </table>
+            </div>
+
+            <div class="w-1/2 p-8 flex flex-col items-center justify-center bg-white border-l shadow-inner relative">
+                <div class="text-center mb-10 w-full">
+                    <p class="text-gray-500 text-2xl">ยอดสุทธิ / Total</p>
+                    <h2 class="text-8xl font-bold text-blue-600 mt-2" id="display-total">฿0.00</h2>
+                </div>
+
+                <div class="p-4 border-4 border-blue-500 rounded-3xl mb-6 shadow-xl bg-white">
+                     {% if restaurant.payment_qr_image %}
+                        <img src="{{ restaurant.payment_qr_image.url }}" class="w-72 h-72 object-contain">
+                    {% else %}
+                        <div class="w-72 h-72 bg-gray-100 flex flex-col items-center justify-center text-gray-400 rounded-xl">
+                            <span class="text-4xl mb-2">📷</span>
+                            <span>No QR Code</span>
+                        </div>
+                    {% endif %}
+                </div>
+                <p class="text-2xl font-bold text-gray-700 animate-pulse">📲 Scan to Pay</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- 1. WebSocket Logic ---
+        const restaurantId = "{{ restaurant.id }}";
+        const wsScheme = window.location.protocol === "https:" ? "wss" : "ws";
+        
+        console.log("Connecting to Display Socket...");
+        const socket = new WebSocket(
+            wsScheme + '://' + window.location.host + '/ws/restaurant/' + restaurantId + '/'
+        );
+
+        socket.onopen = function() {
+            console.log("✅ Display Screen Connected!");
+        };
+
+        socket.onmessage = function(e) {
+            const data = JSON.parse(e.data);
+            
+            if (data.type === 'show_customer_payment') {
+                showPaymentScreen(data.items, data.total);
+            } 
+            else if (data.type === 'hide_customer_payment') {
+                showIdleScreen();
+            }
+        };
+
+        socket.onclose = function() {
+            console.error("Connection lost. Reconnecting in 3s...");
+            setTimeout(() => location.reload(), 3000);
+        };
+
+        // --- 2. Slideshow Logic ---
+        const slides = document.querySelectorAll('.slide-img');
+        let currentSlide = 0;
+
+        function startSlideshow() {
+            if (slides.length > 0) {
+                // โชว์รูปแรกก่อนเลย
+                slides[0].classList.remove('opacity-0');
+
+                if (slides.length > 1) {
+                    setInterval(() => {
+                        // ซ่อนรูปปัจจุบัน
+                        slides[currentSlide].classList.add('opacity-0');
+                        
+                        // คำนวณ Index รูปถัดไป
+                        currentSlide = (currentSlide + 1) % slides.length;
+                        
+                        // โชว์รูปถัดไป
+                        slides[currentSlide].classList.remove('opacity-0');
+                    }, 5000); // เปลี่ยนทุก 5 วินาที
+                }
+            }
+        }
+        
+        // เริ่มต้น Slideshow ทันทีที่โหลดหน้าเว็บ
+        startSlideshow();
+
+        // --- 3. UI Functions ---
+        const screenIdle = document.getElementById('screen-idle');
+        const screenPayment = document.getElementById('screen-payment');
+        const listBody = document.getElementById('order-items-list');
+        const totalDisplay = document.getElementById('display-total');
+
+        function showPaymentScreen(items, total) {
+            screenIdle.classList.add('hidden');
+            screenPayment.classList.remove('hidden'); // แสดงหน้า Payment
+            
+            // ใส่ข้อมูล
+            totalDisplay.textContent = total;
+            listBody.innerHTML = '';
+            items.forEach(item => {
+                const row = `
+                    <tr class="border-b border-gray-100 hover:bg-gray-50 transition">
+                        <td class="py-4 font-bold text-gray-700">${item.name}</td>
+                        <td class="py-4 text-center text-gray-600">x${item.quantity}</td>
+                        <td class="py-4 text-right font-medium text-gray-800">${item.price}</td>
+                    </tr>
+                `;
+                listBody.innerHTML += row;
+            });
+        }
+
+        function showIdleScreen() {
+            screenPayment.classList.add('hidden'); // ซ่อนหน้า Payment
+            screenIdle.classList.remove('hidden'); // กลับไปหน้า Slide
+        }
+    </script>
+</body>
+</html>

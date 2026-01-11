@@ -33,4 +33,6 @@ urlpatterns = [
     path('report/', views.report_sales, name='report_sales'),
 
     path('settings/', views.restaurant_settings, name='restaurant_settings'),
+
+    path('customer-display/<slug:restaurant_slug>/', views.customer_facing_display, name='customer_display'),
 ]
