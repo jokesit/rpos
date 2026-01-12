@@ -103,6 +103,12 @@ class Table(models.Model):
         # คืนค่าเป็น Data URI scheme (ใช้ใส่ใน tag <img src="..."> ได้เลย)
         return qr.png_data_uri(scale=10)
     
+    # for kill link
+    def refresh_uuid(self):
+        """เปลี่ยนรหัส UUID ใหม่ เพื่อให้ Link เก่าใช้งานไม่ได้"""
+        self.uuid = uuid.uuid4()
+        self.save()
+    
 
 
 class Category(models.Model):

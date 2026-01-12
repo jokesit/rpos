@@ -58,4 +58,36 @@
         </div>
     </main>
 </div>
+
+
+<script>
+    const restaurantId = "{{ restaurant.id }}";
+    const wsScheme = window.location.protocol === "https:" ? "wss" : "ws";
+    
+    // เชื่อมต่อ WebSocket ช่องเดียวกับที่ใช้ในร้าน
+    const socket = new WebSocket(
+        wsScheme + '://' + window.location.host + '/ws/restaurant/' + restaurantId + '/'
+    );
+
+    socket.onopen = function() {
+        console.log("✅ Table Management Connected to WebSocket");
+    };
+
+    socket.onmessage = function(e) {
+        const data = JSON.parse(e.data);
+        
+        // ⭐ ถ้าได้รับคำสั่ง 'refresh_tables' ให้รีเฟรชหน้าจอทันที
+        if (data.command === 'refresh_tables') {
+            console.log("♻️ Table updated! Refreshing page...");
+            window.location.reload(); 
+        }
+    };
+    
+    // Auto Reconnect (กันเหนียว)
+    socket.onclose = function() {
+        console.log("WebSocket closed. Reconnecting...");
+        setTimeout(() => location.reload(), 5000);
+    };
+</script>
+
 {% endblock %}

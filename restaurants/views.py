@@ -8,6 +8,8 @@ from django.db.models.functions import TruncDate
 from decimal import Decimal
 from django.utils import timezone
 from django.core.exceptions import ObjectDoesNotExist
+from channels.layers import get_channel_layer
+from asgiref.sync import async_to_sync
 
 
 # for show owner
@@ -347,9 +349,17 @@ def close_bill(request, table_id):
                 updated_at=timezone.now()
             )
             
-            # (Optional) ถ้า Model Table มี field is_occupied ให้เคลียร์ด้วย
-            # table.is_occupied = False
-            # table.save()
+            table.refresh_uuid()
+            
+            # 2. ⭐ เพิ่มส่วนนี้: ส่งสัญญาณ WebSocket บอกให้หน้ารายการโต๊ะรีเฟรช
+            channel_layer = get_channel_layer()
+            async_to_sync(channel_layer.group_send)(
+                f'restaurant_{table.restaurant.id}',  # ส่งเข้า Group ของร้านนั้นๆ
+                {
+                    'type': 'table_update_notification', # ชื่อ Event ที่จะไปเขียนใน consumers.py
+                    'message': 'Refresh Tables'
+                }
+            )
             
             messages.success(request, f'รับชำระเงินโต๊ะ {table.name} เรียบร้อยแล้ว')
         

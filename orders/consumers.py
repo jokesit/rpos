@@ -192,3 +192,10 @@ class OrderConsumer(AsyncWebsocketConsumer):
             'message': event['message'],
             'order': event.get('order')
         }))
+
+
+    async def table_update_notification(self, event):
+        # ส่งข้อความไปบอก Browser ว่าให้รีเฟรชหน้าจอได้แล้ว
+        await self.send(text_data=json.dumps({
+            'command': 'refresh_tables' 
+        }))

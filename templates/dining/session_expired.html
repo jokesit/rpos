@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ขอบคุณที่ใช้บริการ - {{ restaurant.name }}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 h-screen flex flex-col items-center justify-center p-4">
+    <div class="bg-white p-8 rounded-2xl shadow-xl text-center max-w-sm w-full">
+        <div class="mb-6 bg-green-100 w-20 h-20 rounded-full flex items-center justify-center mx-auto">
+            <span class="text-4xl">🙏</span>
+        </div>
+        
+        <h1 class="text-2xl font-bold text-gray-800 mb-2">ขอบคุณที่ใช้บริการ</h1>
+        <p class="text-gray-500 mb-6">
+            รายการอาหารของท่านถูกชำระเงิน<br>และปิดโต๊ะเรียบร้อยแล้ว
+        </p>
+
+        <div class="border-t border-gray-100 pt-6">
+            <p class="text-sm text-gray-400">ต้องการสั่งอาหารเพิ่ม?</p>
+            <p class="text-sm text-blue-600 font-bold mt-1">กรุณาสแกน QR Code ใหม่อีกครั้ง</p>
+        </div>
+    </div>
+</body>
+</html>
