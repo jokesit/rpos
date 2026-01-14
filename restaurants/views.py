@@ -10,6 +10,31 @@ from django.utils import timezone
 from django.core.exceptions import ObjectDoesNotExist
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
+from orders.models import OrderItem, Order
+from django.contrib.auth.decorators import user_passes_test
+
+
+
+@user_passes_test(lambda u: u.is_superuser) # เฉพาะ Superuser เท่านั้น
+def superuser_dashboard(request):
+    restaurants = Restaurant.objects.all().order_by('-created_at')
+    
+    context = {
+        'restaurants': restaurants,
+        'total_count': restaurants.count(),
+        'active_count': restaurants.filter(is_active=True).count()
+    }
+    return render(request, 'superuser/dashboard.html', context)
+
+@user_passes_test(lambda u: u.is_superuser)
+def toggle_restaurant_active(request, restaurant_id):
+    shop = get_object_or_404(Restaurant, pk=restaurant_id)
+    shop.is_active = not shop.is_active # สลับสถานะ
+    shop.save()
+    
+    status_msg = "เปิดใช้งาน" if shop.is_active else "ระงับการใช้งาน"
+    messages.success(request, f"ร้าน {shop.name} ถูก {status_msg} แล้ว")
+    return redirect('superuser_dashboard')
 
 
 # for show owner
@@ -18,7 +43,7 @@ def dashboard(request):
     # เช็คว่าเป็น Superuser หรือไม่?
     if request.user.is_superuser:
         # ถ้าใช่ ให้ไปหน้า Admin Panel ของ Django เลย
-        return redirect('/adminsuperuser/')
+        return redirect('/super-admin/')
     
     # 2. เช็คว่า User นี้มีร้านค้าหรือยัง?
     try:
@@ -70,7 +95,7 @@ def create_restaurant(request):
         return redirect('dashboard')
 
     if request.method == 'POST':
-        form = RestaurantForm(request.POST)
+        form = RestaurantForm(request.POST, request.FILES)
         if form.is_valid():
             restaurant = form.save(commit=False)
             restaurant.owner = request.user
@@ -289,10 +314,11 @@ def table_bill_detail(request, table_id):
     subtotal = Decimal('0.00')
     
     for order in active_orders:
-        for item in order.items.all():
+        for item in order.items.select_related('menu_item').all():
             item_total = item.price * item.quantity
             subtotal += item_total
             order_items.append({
+                'id': item.id,
                 'menu_name': item.menu_item.name,
                 'quantity': item.quantity,
                 'price': item.price,
@@ -436,10 +462,48 @@ def restaurant_settings(request):
 
 @login_required
 def customer_facing_display(request, restaurant_slug):
-    restaurant = get_object_or_404(Restaurant, slug=restaurant_slug)
+    restaurant = get_object_or_404(Restaurant, slug=restaurant_slug, owner=request.user)
     promo_images = restaurant.promo_images.all().order_by('-created_at')
     return render(request, 'restaurants/customer_display.html', {
         'restaurant': restaurant,
         'promo_images': promo_images,
     })
 
+
+
+# delete item in bill
+@login_required
+def delete_order_item(request, item_id):
+    # ดึงรายการออกมา
+    item = get_object_or_404(OrderItem, pk=item_id)
+    order = item.order
+    
+    # Security: เช็คว่าเป็นร้านของตัวเองไหม
+    if order.restaurant.owner != request.user:
+        messages.error(request, "คุณไม่มีสิทธิ์ทำรายการนี้")
+        return redirect('cashier_dashboard')
+        
+    if request.method == 'POST':
+        item_total = item.price * item.quantity
+        menu_name = item.menu_item.name
+        
+        # 1. ลบรายการ
+        item.delete()
+        
+        # 2. ⭐ อัปเดตยอดรวมของ Order ใหม่ (สำคัญมาก)
+        # วิธีที่ 1: ลบยอดออกตรงๆ
+        order.total_price -= item_total
+        if order.total_price < 0: order.total_price = 0
+        order.save()
+        
+        # (หรือ) วิธีที่ 2: คำนวณใหม่ทั้งหมดเพื่อความชัวร์
+        # total = sum(i.price * i.quantity for i in order.items.all())
+        # order.total_price = total
+        # order.save()
+
+        messages.success(request, f"ลบรายการ {menu_name} เรียบร้อยแล้ว")
+        
+        # ส่ง WebSocket ไปบอกหน้าจอลูกค้าว่ายอดเปลี่ยน (ถ้าต้องการ)
+        # ... (ใช้ code send_group เหมือน close_bill) ...
+
+    return redirect('table_bill_detail', table_id=order.table.id)

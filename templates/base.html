@@ -15,6 +15,11 @@
             <div>
                 {% if user.is_authenticated %}
                     <span class="mr-4">สวัสดี, {{ user.email }}</span>
+                    {% if user.is_superuser %}
+                        <a href="{% url 'superuser_dashboard' %}" class="bg-indigo-900 text-white px-3 py-1 mr-1.5 rounded text-sm font-bold border border-indigo-700 hover:bg-indigo-800 ml-4">
+                            🛡️ Admin
+                        </a>
+                    {% endif %}
             
                     <a href="{% url 'account_logout' %}" class="bg-red-500 text-white hover:bg-red-600 px-3 py-1 rounded transition">
                         Logout

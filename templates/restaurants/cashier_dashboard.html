@@ -36,4 +36,54 @@
     </a>
     {% endfor %}
 </div>
+
+
+<script>
+    const restaurantId = "{{ restaurant.id }}";
+    const wsScheme = window.location.protocol === "https:" ? "wss" : "ws";
+    
+    // เชื่อมต่อ WebSocket
+    const socket = new WebSocket(
+        wsScheme + '://' + window.location.host + '/ws/restaurant/' + restaurantId + '/'
+    );
+
+    socket.onopen = function() {
+        console.log("✅ Cashier Dashboard Connected");
+    };
+
+    socket.onmessage = function(e) {
+        const data = JSON.parse(e.data);
+        
+        // ⭐ กรณีมีออเดอร์ใหม่เข้ามา
+        if (data.command === 'new_order_alert') {
+            console.log("🔔 New Order:", data);
+            
+            // เล่นเสียงแจ้งเตือน (ถ้ามีไฟล์เสียง)
+            // const audio = new Audio('/static/sound/ding.mp3');
+            // audio.play();
+
+            // แสดง Notification แบบ Browser (Optional)
+            if (Notification.permission === "granted") {
+                new Notification("มีออเดอร์ใหม่!", { body: `โต๊ะ ${data.table} ยอด ${data.total} บาท` });
+            }
+
+            // รีเฟรชหน้าจออัตโนมัติ
+            setTimeout(() => {
+                window.location.reload();
+            }, 1000); // หน่วง 1 วิ ให้ Server ประมวลผลเสร็จ
+        }
+        
+        // ⭐ กรณีมีการปิดบิล/รีเฟรชโต๊ะ
+        if (data.command === 'refresh_tables') {
+            window.location.reload();
+        }
+    };
+    
+    // ขอสิทธิ์แจ้งเตือน
+    if (Notification.permission !== "denied") {
+        Notification.requestPermission();
+    }
+</script>
+
+
 {% endblock %}

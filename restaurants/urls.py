@@ -35,4 +35,8 @@ urlpatterns = [
     path('settings/', views.restaurant_settings, name='restaurant_settings'),
 
     path('customer-display/<slug:restaurant_slug>/', views.customer_facing_display, name='customer_display'),
+    path('cashier/order-item/delete/<int:item_id>/', views.delete_order_item, name='delete_order_item'),
+
+    path('super-admin/', views.superuser_dashboard, name='superuser_dashboard'),
+    path('super-admin/toggle-status/<int:restaurant_id>/', views.toggle_restaurant_active, name='toggle_restaurant_active'),
 ]

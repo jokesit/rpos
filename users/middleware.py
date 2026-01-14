@@ -19,7 +19,7 @@ class AdminIPRestrictMiddleware:
 
     def __call__(self, request):
         # เช็คว่ากำลังเข้าหน้า Admin หรือไม่
-        if request.path.startswith('/adminsuperuser/'):
+        if request.path.startswith('/super-admin/'):
             
             # เช็คว่าเปิดใช้งานระบบป้องกันไหม (ดึงจาก settings)
             restrict_enabled = getattr(settings, 'ADMIN_IP_RESTRICTION', False)
@@ -93,7 +93,7 @@ class MaintenanceModeMiddleware:
             # - เป็น Superuser (เพื่อให้เจ้าของระบบเทสได้)
             # - ไฟล์ Static/Media (เพื่อให้หน้าเว็บแสดงผลสวยงาม)
             
-            is_admin_url = request.path.startswith('/adminsuperuser/')
+            is_admin_url = request.path.startswith('/super-admin/')
             is_static_url = request.path.startswith(settings.STATIC_URL)
             is_media_url = request.path.startswith(settings.MEDIA_URL)
             

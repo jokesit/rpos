@@ -1,0 +1,152 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50 pb-10">
+    
+    <div class="bg-indigo-900 text-white shadow-lg sticky top-0 z-30">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex flex-col md:flex-row justify-between items-center h-auto md:h-20 py-4 gap-4">
+                
+                <div class="flex items-center gap-3">
+                    <div class="bg-indigo-800 p-2 rounded-lg">
+                        <span class="text-2xl">🛡️</span>
+                    </div>
+                    <div>
+                        <h1 class="text-xl font-bold leading-tight">Super Admin Control</h1>
+                        <p class="text-indigo-200 text-xs">จัดการร้านค้าและระบบ</p>
+                    </div>
+                </div>
+                
+                <div class="w-full md:w-auto">
+                    <form method="get" class="relative group">
+                        <input type="text" 
+                               name="q" 
+                               value="{{ search_query }}" 
+                               placeholder="ค้นหาร้านค้า, เจ้าของ..." 
+                               class="w-full md:w-80 pl-10 pr-4 py-2 bg-indigo-800 border border-indigo-700 rounded-lg text-white placeholder-indigo-300 focus:bg-white focus:text-gray-900 focus:ring-2 focus:ring-indigo-400 focus:outline-none transition-all duration-300 shadow-sm">
+                        
+                        <span class="absolute left-3 top-2.5 text-indigo-300 group-focus-within:text-gray-500 transition-colors duration-300">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                            </svg>
+                        </span>
+
+                        {% if search_query %}
+                        <a href="{% url 'superuser_dashboard' %}" class="absolute right-3 top-2.5 text-indigo-300 hover:text-white group-focus-within:text-gray-400 group-focus-within:hover:text-red-500">
+                            ✕
+                        </a>
+                        {% endif %}
+                    </form>
+                </div>
+
+            </div>
+        </div>
+    </div>
+    
+
+    <div class="max-w-7xl mx-auto px-6 mt-2.5">
+        
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+            <div class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-indigo-500">
+                <p class="text-gray-500 text-xs uppercase font-bold">ร้านค้าทั้งหมด</p>
+                <h3 class="text-3xl font-bold text-gray-800">{{ stats.total }}</h3>
+            </div>
+            <div class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-green-500">
+                <p class="text-gray-500 text-xs uppercase font-bold">ใช้งานปกติ (Active)</p>
+                <h3 class="text-3xl font-bold text-green-600">{{ stats.active }}</h3>
+            </div>
+            <div class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-red-500">
+                <p class="text-gray-500 text-xs uppercase font-bold">ถูกระงับ (Banned)</p>
+                <h3 class="text-3xl font-bold text-red-600">{{ stats.inactive }}</h3>
+            </div>
+            <div class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-purple-500">
+                <p class="text-gray-500 text-xs uppercase font-bold">ผู้ใช้ในระบบ</p>
+                <h3 class="text-3xl font-bold text-purple-600">{{ stats.users }}</h3>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-md overflow-hidden border border-gray-100">
+            <div class="p-6 border-b border-gray-100 bg-gray-50/50 flex justify-between items-center">
+                <h3 class="font-bold text-gray-700">รายชื่อร้านค้า</h3>
+                {% if search_query %}
+                <a href="{% url 'superuser_dashboard' %}" class="text-xs text-red-500 hover:underline">ล้างการค้นหา</a>
+                {% endif %}
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead class="bg-gray-100 text-gray-600 text-xs uppercase tracking-wider">
+                        <tr>
+                            <th class="p-4 font-semibold">ร้านค้า</th>
+                            <th class="p-4 font-semibold">เจ้าของ</th>
+                            <th class="p-4 font-semibold text-center">วันที่สมัคร</th>
+                            <th class="p-4 font-semibold text-center">สถานะ</th>
+                            <th class="p-4 font-semibold text-right">ดำเนินการ</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-100 text-sm">
+                        {% for shop in restaurants %}
+                        <tr class="hover:bg-blue-50 transition duration-150">
+                            <td class="p-4">
+                                <div class="flex items-center gap-3">
+                                    {% if shop.image %}
+                                        <img src="{{ shop.image.url }}" class="w-10 h-10 rounded-full object-cover border">
+                                    {% else %}
+                                        <div class="w-10 h-10 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center font-bold">
+                                            {{ shop.name|slice:":1" }}
+                                        </div>
+                                    {% endif %}
+                                    <div>
+                                        <div class="font-bold text-gray-800">{{ shop.name }}</div>
+                                        <div class="text-xs text-gray-500">{{ shop.phone }}</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="p-4">
+                                <div class="font-medium text-gray-700">{{ shop.owner.username }}</div>
+                                <div class="text-xs text-gray-400">{{ shop.owner.email }}</div>
+                            </td>
+                            <td class="p-4 text-center text-gray-500">
+                                {{ shop.created_at|date:"d M Y" }}
+                            </td>
+                            <td class="p-4 text-center">
+                                {% if shop.is_active %}
+                                    <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                        <span class="w-2 h-2 bg-green-500 rounded-full"></span> Active
+                                    </span>
+                                {% else %}
+                                    <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                                        <span class="w-2 h-2 bg-red-500 rounded-full"></span> Banned
+                                    </span>
+                                {% endif %}
+                            </td>
+                            <td class="p-4 text-right">
+                                <a href="{% url 'toggle_restaurant_active' shop.id %}" 
+                                   class="inline-block px-4 py-2 rounded-lg text-xs font-bold transition shadow-sm border
+                                   {% if shop.is_active %}
+                                        bg-white text-red-500 border-red-200 hover:bg-red-50
+                                   {% else %}
+                                        bg-green-600 text-white border-green-600 hover:bg-green-700
+                                   {% endif %}">
+                                    {% if shop.is_active %}
+                                        ⛔ ระงับร้านค้า
+                                    {% else %}
+                                        ✅ อนุมัติ / เปิด
+                                    {% endif %}
+                                </a>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="5" class="p-8 text-center text-gray-400">
+                                ไม่พบข้อมูลร้านค้า
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

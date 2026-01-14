@@ -6,12 +6,56 @@
     <aside class="w-full md:w-64 bg-white rounded-xl shadow-sm border border-gray-100 p-6 h-fit shrink-0">
         <div class="text-center mb-6">
             {% if restaurant.image %}
-                <img src="{{ restaurant.image.url }}" class="w-20 h-20 rounded-full mx-auto mb-3 object-cover border-2 border-blue-100 shadow-sm">
+                <img src="{{ restaurant.image.url }}" 
+                    alt="{{ restaurant.name }}" 
+                    class="w-24 h-24 rounded-full mx-auto mb-3 object-cover border-4 border-blue-50 shadow-md">
             {% else %}
-                <div class="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3 text-2xl">🏪</div>
+                <div class="w-24 h-24 bg-linear-to-br from-blue-100 to-blue-200 rounded-full flex items-center justify-center mx-auto mb-3 text-4xl shadow-inner text-blue-500">
+                    🏪
+                </div>
             {% endif %}
-            <h3 class="font-bold text-gray-800 text-lg">{{ restaurant.name }}</h3>
+            <h3 class="font-bold text-gray-800 text-lg mt-2">{{ restaurant.name }}</h3>
+            <p class="text-xs text-gray-500">Owner Dashboard</p>
         </div>
+        <nav class="space-y-1">
+            <a href="{% url 'dashboard' %}" class="flex items-center gap-3 px-4 py-3 text-gray-600 hover:bg-gray-50 font-bold rounded-lg transition">
+                <span>🏠</span> ภาพรวม
+            </a>
+            <a href="{% url 'menu_manage' %}" class="flex items-center gap-3 px-4 py-3 text-gray-600 hover:bg-gray-50 rounded-lg transition">
+                <span>🍽️</span> จัดการเมนู
+            </a>
+            <a href="{% url 'table_list' %}" class="flex items-center gap-3 px-4 py-3 text-gray-600 hover:bg-gray-50 rounded-lg transition">
+                <span>🎫</span> โต๊ะ & QR Code
+            </a>
+            <a href="{% url 'kitchen_dashboard' %}" target="_blank" class="flex items-center gap-3 px-4 py-3 text-gray-600 hover:bg-gray-50 rounded-lg transition">
+                <span>👨‍🍳</span> จอครัว (KDS)
+            </a>
+            <a href="{% url 'cashier_dashboard' %}" target="_blank" class="flex items-center gap-3 px-4 py-3 text-gray-600 hover:bg-gray-50 rounded-lg transition">
+                <span>🖥️</span> แคชเชียร์ (POS)
+            </a>
+            
+            <a href="{% url 'report_sales' %}" class="flex items-center gap-3 px-4 py-3 text-gray-600 hover:bg-gray-50 rounded-lg transition">
+                <span>📊</span> รายงานยอดขาย
+            </a>
+            <div class="border-t my-2"></div>
+            <a href="{% url 'restaurant_settings' %}" class="flex items-center gap-3 px-4 py-3 bg-blue-50 text-blue-700 rounded-lg transition">
+                <span>⚙️</span> ตั้งค่าร้านค้า
+            </a>
+
+            <a href="{% url 'customer_display' restaurant.slug %}" target="_blank" onclick="openCustomerWindow(event, this.href)" class="flex items-center gap-3 p-4 bg-purple-600 text-white rounded-xl shadow-lg hover:bg-purple-700 transition transform hover:scale-105 mt-4">
+                
+                <div class="p-3 bg-white/20 rounded-lg">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                    </svg>
+                </div>
+                
+                <div>
+                    <h3 class="font-bold text-lg">เปิดจอฝั่งลูกค้า</h3>
+                    <p class="text-sm text-purple-200">Customer Display Screen</p>
+                </div>
+            </a>
+        </nav>
     </aside>
 
     <main class="flex-1">

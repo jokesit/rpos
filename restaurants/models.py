@@ -35,16 +35,16 @@ class Restaurant(models.Model):
 
     # for create slug
     def save(self, *args, **kwargs):
-        # ถ้ายังไม่มี slug (เพิ่งสร้างใหม่)
         if not self.slug:
-            # สร้าง slug จากชื่อร้าน ถ้าชื่อเป็นไทย slugify อาจจะว่างเปล่า
-            base_slug = slugify(self.name)
-            if not base_slug: 
-                # ถ้าชื่อไทยล้วน ให้ใช้ uuid ย่อๆ แทน
-                base_slug = str(uuid.uuid4())[:8]
-            
-            # ตรวจสอบซ้ำ (กันเหนียว)
-            self.slug = base_slug
+            base_slug = slugify(self.name) or str(uuid.uuid4())[:8]
+            slug = base_slug
+            counter = 1
+            # check duplicate
+            while Restaurant.objects.filter(slug=slug).exists():
+                slug = f"{base_slug}-{counter}"
+                counter += 1
+
+            self.slug = slug 
 
         if self.image:
             try:
