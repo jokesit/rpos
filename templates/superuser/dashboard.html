@@ -121,19 +121,23 @@
                                 {% endif %}
                             </td>
                             <td class="p-4 text-right">
-                                <a href="{% url 'toggle_restaurant_active' shop.id %}" 
-                                   class="inline-block px-4 py-2 rounded-lg text-xs font-bold transition shadow-sm border
-                                   {% if shop.is_active %}
-                                        bg-white text-red-500 border-red-200 hover:bg-red-50
-                                   {% else %}
-                                        bg-green-600 text-white border-green-600 hover:bg-green-700
-                                   {% endif %}">
-                                    {% if shop.is_active %}
-                                        ⛔ ระงับร้านค้า
-                                    {% else %}
-                                        ✅ อนุมัติ / เปิด
-                                    {% endif %}
-                                </a>
+                                <form method="post" action="{% url 'toggle_restaurant_active' shop.id %}" class="inline">
+                                    {% csrf_token %}
+                                    <button type="submit"
+                                        class="inline-block px-4 py-2 rounded-lg text-xs font-bold transition shadow-sm border
+                                        {% if shop.is_active %}
+                                            bg-white text-red-500 border-red-200 hover:bg-red-50
+                                        {% else %}
+                                            bg-green-600 text-white border-green-600 hover:bg-green-700
+                                        {% endif %}">
+                                        
+                                        {% if shop.is_active %}
+                                            ⛔ ระงับร้านค้า
+                                        {% else %}
+                                            ✅ อนุมัติ / เปิด
+                                        {% endif %}
+                                    </button>
+                                </form>
                             </td>
                         </tr>
                         {% empty %}

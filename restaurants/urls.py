@@ -39,4 +39,6 @@ urlpatterns = [
 
     path('super-admin/', views.superuser_dashboard, name='superuser_dashboard'),
     path('super-admin/toggle-status/<int:restaurant_id>/', views.toggle_restaurant_active, name='toggle_restaurant_active'),
+
+    path('suspended/', views.restaurant_suspended, name='restaurant_suspended'),
 ]

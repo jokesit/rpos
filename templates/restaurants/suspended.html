@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Account Suspended</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 h-screen flex items-center justify-center">
+    <div class="bg-white p-8 rounded-xl shadow-lg max-w-md w-full text-center">
+        <div class="text-6xl mb-4">⛔</div>
+        <h1 class="text-2xl font-bold text-gray-800 mb-2">บัญชีร้านค้าถูกระงับ</h1>
+        <p class="text-gray-600 mb-6">
+            ร้านค้าของคุณถูกระงับการใช้งานชั่วคราว <br>
+            กรุณาติดต่อผู้ดูแลระบบเพื่อตรวจสอบและแก้ไขปัญหา
+        </p>
+        
+        <div class="bg-red-50 border border-red-200 rounded-lg p-4 mb-6 text-sm text-red-800">
+            <strong>Contact Support:</strong><br>
+            Email: admin@rpos-system.com<br>
+            Tel: 02-123-4567
+        </div>
+
+        <a href="{% url 'account_logout' %}" class="text-blue-600 hover:underline text-sm">ออกจากระบบ</a>
+    </div>
+</body>
+</html>

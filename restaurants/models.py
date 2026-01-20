@@ -1,6 +1,7 @@
 from django.db import models
 from django.conf import settings # เพื่ออ้างอิง User model
 from django.utils.text import slugify
+from django.core.validators import FileExtensionValidator
 import uuid
 import segno
 from utils import compress_image
@@ -13,7 +14,7 @@ class Restaurant(models.Model):
     name = models.CharField(max_length=255, verbose_name="ชื่อร้าน")
     
     # field รูปภาพร้านค้า
-    image = models.ImageField(upload_to='restaurant_images/', blank=True, null=True, verbose_name="รูปร้านค้า/โลโก้")
+    image = models.ImageField(upload_to='restaurant_images/', blank=True, null=True, verbose_name="รูปร้านค้า/โลโก้", validators=[FileExtensionValidator(['jpg','jpeg','png','webp'])])
     
     # เพิ่มรูป Payment QR Code
     payment_qr_image = models.ImageField(upload_to='payment_qrs/', blank=True, null=True, verbose_name="QR Code รับเงิน (ธนาคาร)")
@@ -127,7 +128,7 @@ class MenuItem(models.Model):
     name = models.CharField(max_length=200, verbose_name="ชื่ออาหาร")
     description = models.TextField(blank=True, verbose_name="รายละเอียด")
     price = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="ราคา")
-    image = models.ImageField(upload_to='menu_images/', blank=True, null=True, verbose_name="รูปภาพ")
+    image = models.ImageField(upload_to='menu_images/', blank=True, null=True, verbose_name="รูปภาพ", validators=[FileExtensionValidator(['jpg','jpeg','png', 'webp'])])
     is_available = models.BooleanField(default=True, verbose_name="มีจำหน่าย")
     
     created_at = models.DateTimeField(auto_now_add=True)

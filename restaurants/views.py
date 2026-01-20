@@ -12,6 +12,8 @@ from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
 from orders.models import OrderItem, Order
 from django.contrib.auth.decorators import user_passes_test
+from django.views.decorators.http import require_POST
+from .decorators import restaurant_active_required
 
 
 
@@ -26,6 +28,8 @@ def superuser_dashboard(request):
     }
     return render(request, 'superuser/dashboard.html', context)
 
+
+@require_POST
 @user_passes_test(lambda u: u.is_superuser)
 def toggle_restaurant_active(request, restaurant_id):
     shop = get_object_or_404(Restaurant, pk=restaurant_id)
@@ -39,6 +43,7 @@ def toggle_restaurant_active(request, restaurant_id):
 
 # for show owner
 @login_required
+@restaurant_active_required
 def dashboard(request):
     # เช็คว่าเป็น Superuser หรือไม่?
     if request.user.is_superuser:
@@ -114,6 +119,7 @@ def create_restaurant(request):
 # for manage table
 
 @login_required
+@restaurant_active_required
 def table_list(request):
     restaurant = request.user.restaurant
     tables = restaurant.tables.all()
@@ -129,6 +135,7 @@ def table_list(request):
     return render(request, 'restaurants/table_list.html', {'tables': tables, 'restaurant': restaurant})
 
 @login_required
+@restaurant_active_required
 def delete_table(request, table_id):
     restaurant = request.user.restaurant
     # ต้องเช็คว่า table_id นี้เป็นของร้านเราจริงๆ (Security Check)
@@ -146,6 +153,7 @@ def delete_table(request, table_id):
 # for create menu
 
 @login_required
+@restaurant_active_required
 def menu_manage(request):
     restaurant = request.user.restaurant
     categories = restaurant.categories.prefetch_related('items').all() # ดึงหมวดหมู่พร้อมรายการอาหาร
@@ -156,6 +164,7 @@ def menu_manage(request):
     })
 
 @login_required
+@restaurant_active_required
 def add_category(request):
     restaurant = request.user.restaurant
     if request.method == 'POST':
@@ -171,6 +180,7 @@ def add_category(request):
     return render(request, 'restaurants/form_generic.html', {'form': form, 'title': 'เพิ่มหมวดหมู่'})
 
 @login_required
+@restaurant_active_required
 def add_menu_item(request):
     restaurant = request.user.restaurant
     if request.method == 'POST':
@@ -186,6 +196,7 @@ def add_menu_item(request):
 
 
 @login_required
+@restaurant_active_required
 def edit_menu_item(request, item_id):
     restaurant = request.user.restaurant
     
@@ -210,6 +221,7 @@ def edit_menu_item(request, item_id):
 
 
 @login_required
+@restaurant_active_required
 def delete_menu_item(request, item_id):
     restaurant = request.user.restaurant
     item = get_object_or_404(MenuItem, id=item_id, category__restaurant=restaurant)
@@ -224,6 +236,7 @@ def delete_menu_item(request, item_id):
 
 # (แถม) แก้ไขหมวดหมู่ด้วย เผื่อพิมพ์ผิด
 @login_required
+@restaurant_active_required
 def edit_category(request, category_id):
     restaurant = request.user.restaurant
     category = get_object_or_404(Category, id=category_id, restaurant=restaurant)
@@ -240,6 +253,7 @@ def edit_category(request, category_id):
     return render(request, 'restaurants/form_generic.html', {'form': form, 'title': 'แก้ไขหมวดหมู่'})
 
 @login_required
+@restaurant_active_required
 def delete_category(request, category_id):
     restaurant = request.user.restaurant
     category = get_object_or_404(Category, id=category_id, restaurant=restaurant)
@@ -256,6 +270,7 @@ def delete_category(request, category_id):
 # for kitchen
 
 @login_required
+@restaurant_active_required
 def kitchen_dashboard(request):
     restaurant = request.user.restaurant
     # ดึงออเดอร์ที่ยังทำไม่เสร็จ (Pending/Cooking)
@@ -273,6 +288,7 @@ def kitchen_dashboard(request):
 # for cashier
 
 @login_required
+@restaurant_active_required
 def cashier_dashboard(request):
     restaurant = request.user.restaurant
     tables = restaurant.tables.all()
@@ -296,6 +312,7 @@ def cashier_dashboard(request):
 
 
 @login_required
+@restaurant_active_required
 def table_bill_detail(request, table_id):
     restaurant = request.user.restaurant
     table = get_object_or_404(Table, id=table_id, restaurant=restaurant)
@@ -359,6 +376,7 @@ def table_bill_detail(request, table_id):
 
 
 @login_required
+@restaurant_active_required
 def close_bill(request, table_id):
     if request.method == 'POST':
         restaurant = request.user.restaurant
@@ -395,6 +413,7 @@ def close_bill(request, table_id):
 
 # for report
 @login_required
+@restaurant_active_required
 def report_sales(request):
     restaurant = request.user.restaurant
     
@@ -422,6 +441,7 @@ def report_sales(request):
 # setting
 
 @login_required
+@restaurant_active_required
 def restaurant_settings(request):
     restaurant = request.user.restaurant
     
@@ -461,6 +481,7 @@ def restaurant_settings(request):
 
 
 @login_required
+@restaurant_active_required
 def customer_facing_display(request, restaurant_slug):
     restaurant = get_object_or_404(Restaurant, slug=restaurant_slug, owner=request.user)
     promo_images = restaurant.promo_images.all().order_by('-created_at')
@@ -473,37 +494,34 @@ def customer_facing_display(request, restaurant_slug):
 
 # delete item in bill
 @login_required
+@restaurant_active_required
 def delete_order_item(request, item_id):
-    # ดึงรายการออกมา
-    item = get_object_or_404(OrderItem, pk=item_id)
+    item = get_object_or_404(
+        OrderItem,
+        pk=item_id,
+        order__restaurant__owner=request.user
+    )
+
     order = item.order
-    
-    # Security: เช็คว่าเป็นร้านของตัวเองไหม
-    if order.restaurant.owner != request.user:
-        messages.error(request, "คุณไม่มีสิทธิ์ทำรายการนี้")
-        return redirect('cashier_dashboard')
-        
+
     if request.method == 'POST':
         item_total = item.price * item.quantity
         menu_name = item.menu_item.name
-        
+
         # 1. ลบรายการ
         item.delete()
-        
-        # 2. ⭐ อัปเดตยอดรวมของ Order ใหม่ (สำคัญมาก)
-        # วิธีที่ 1: ลบยอดออกตรงๆ
+
+        # 2. อัปเดตยอดรวมของ Order
         order.total_price -= item_total
-        if order.total_price < 0: order.total_price = 0
+        if order.total_price < 0:
+            order.total_price = 0
         order.save()
-        
-        # (หรือ) วิธีที่ 2: คำนวณใหม่ทั้งหมดเพื่อความชัวร์
-        # total = sum(i.price * i.quantity for i in order.items.all())
-        # order.total_price = total
-        # order.save()
 
         messages.success(request, f"ลบรายการ {menu_name} เรียบร้อยแล้ว")
-        
-        # ส่ง WebSocket ไปบอกหน้าจอลูกค้าว่ายอดเปลี่ยน (ถ้าต้องการ)
-        # ... (ใช้ code send_group เหมือน close_bill) ...
 
     return redirect('table_bill_detail', table_id=order.table.id)
+
+
+
+def restaurant_suspended(request):
+    return render(request, 'restaurants/suspended.html')

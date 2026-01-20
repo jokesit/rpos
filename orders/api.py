@@ -7,6 +7,9 @@ from .models import Order, OrderItem
 import json
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
+from restaurants.decorators import api_restaurant_active_required
+
+
 
 @csrf_exempt
 def create_order_api(request):
@@ -24,6 +27,16 @@ def create_order_api(request):
             # 2. ตรวจสอบโต๊ะ
             table = get_object_or_404(Table, uuid=table_uuid)
             restaurant = table.restaurant
+
+            # =======================================================
+            # ⭐ เพิ่ม Logic ป้องกันร้านโดนแบนตรงนี้ ⭐
+            # =======================================================
+            if not restaurant.is_active:
+                return JsonResponse({
+                    'error': 'ขออภัย ร้านค้านี้ถูกระงับการให้บริการชั่วคราว',
+                    'success': False
+                }, status=403)
+            # =======================================================
             
             # 3. สร้าง Order Header
             order = Order.objects.create(
@@ -96,6 +109,7 @@ def create_order_api(request):
 
 
 @csrf_exempt
+@api_restaurant_active_required
 def update_order_status(request):
     if request.method == 'POST':
         try:
