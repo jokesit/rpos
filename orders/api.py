@@ -2,12 +2,13 @@
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.shortcuts import get_object_or_404
+from django.db.models import Sum
 from restaurants.models import Table, MenuItem
 from .models import Order, OrderItem
 import json
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
-from restaurants.decorators import api_restaurant_active_required
+from restaurants.decorators import restaurant_active_required
 
 
 
@@ -109,7 +110,7 @@ def create_order_api(request):
 
 
 @csrf_exempt
-@api_restaurant_active_required
+@restaurant_active_required
 def update_order_status(request):
     if request.method == 'POST':
         try:
@@ -144,3 +145,55 @@ def update_order_status(request):
             return JsonResponse({'error': str(e)}, status=500)
             
     return JsonResponse({'error': 'Method not allowed'}, status=405)
+
+
+
+# ดึงรายการทั้งหมดที่โต๊ะนั้นสั่ง (ที่ยังไม่จ่ายเงิน)
+def get_table_order_history(request):
+    """API สำหรับดึงรายการอาหารที่สั่งไปแล้วของโต๊ะนั้น"""
+    table_uuid = request.GET.get('table_uuid')
+    
+    if not table_uuid:
+        return JsonResponse({'error': 'Missing table UUID'}, status=400)
+    
+    try:
+        table = Table.objects.get(uuid=table_uuid)
+        
+        # 1. หาออเดอร์ทั้งหมดของโต๊ะนี้ที่ยังไม่จ่ายเงิน (Active Orders)
+        active_orders = table.orders.filter(is_paid=False).exclude(status='CANCELLED').prefetch_related('items__menu_item')
+        
+        history_items = []
+        grand_total = 0
+        
+        for order in active_orders:
+            for item in order.items.all():
+                item_total = item.price * item.quantity
+                grand_total += item_total
+                
+                # แปลงสถานะเป็นข้อความภาษาไทยสวยๆ
+                status_display = item.order.get_status_display()
+                status_color = 'gray'
+                if item.order.status == 'PENDING': status_color = 'yellow'
+                elif item.order.status == 'COOKING': status_color = 'blue'
+                elif item.order.status == 'SERVED': status_color = 'green'
+                
+                history_items.append({
+                    'name': item.menu_item.name,
+                    'quantity': item.quantity,
+                    'price': float(item.price),
+                    'total': float(item_total),
+                    'status': status_display,
+                    'status_code': item.order.status, # เอาไว้ใช้เลือกสี
+                    'time': item.order.created_at.strftime('%H:%M')
+                })
+        
+        return JsonResponse({
+            'success': True,
+            'items': history_items,
+            'grand_total': float(grand_total)
+        })
+        
+    except Table.DoesNotExist:
+        return JsonResponse({'error': 'Table not found'}, status=404)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)

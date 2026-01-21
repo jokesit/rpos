@@ -5,63 +5,134 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>เมนูอาหาร - {{ restaurant.name }}</title>
-    
     <script src="https://cdn.tailwindcss.com"></script>
-    
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
-
     <style>
-        /* ป้องกันการกด Zoom ในมือถือ และซ่อน Scrollbar */
-        body { 
-            touch-action: manipulation; 
-            -webkit-tap-highlight-color: transparent;
-        }
+        body { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
         [x-cloak] { display: none !important; }
+        /* Hide Scrollbar */
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        
+        /* Smooth Fade for Search items */
+        .search-transition { transition: all 0.3s ease; }
     </style>
 </head>
-<body class="bg-gray-50 text-gray-800 antialiased">
+<body class="bg-gray-50 text-gray-800 antialiased font-sans">
 
-    <div x-data="foodMenu()" class="pb-24 min-h-screen relative">
+    <div x-data="foodMenu()" x-init="fetchHistory(); initSearch()" class="pb-24 min-h-screen relative">
         
-        <div class="bg-white shadow-sm sticky top-0 z-10 px-4 py-3 flex justify-between items-center border-b border-gray-100">
-            <div>
-                <h1 class="font-bold text-lg text-gray-800 leading-tight">{{ restaurant.name }}</h1>
-                <p class="text-xs text-gray-500 mt-0.5">โต๊ะ: <span class="font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded">{{ table.name }}</span></p>
-            </div>
+        <div class="bg-white shadow-md sticky top-0 z-30 pb-3">
             
-            <button @click="showCart = true" class="relative bg-blue-50 text-blue-600 p-2.5 rounded-full hover:bg-blue-100 transition active:scale-95">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
-                </svg>
-                <span x-show="cartTotalItems() > 0" 
-                      x-text="cartTotalItems()" 
-                      x-transition.scale
-                      class="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold min-w-5 h-5 flex items-center justify-center rounded-full border-2 border-white shadow-sm">
-                </span>
-            </button>
+            <div class="px-4 py-3 flex justify-between items-center border-b border-gray-100 mb-2">
+                <div>
+                    <h1 class="font-bold text-lg text-gray-900 leading-tight">{{ restaurant.name }}</h1>
+                    <div class="flex items-center gap-2 mt-0.5">
+                        <span class="text-[10px] text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">โต๊ะ {{ table.name }}</span>
+                    </div>
+                </div>
+                
+                <div class="flex items-center gap-3">
+                    <button @click="openHistory()" class="flex flex-col items-center justify-center text-gray-500 hover:text-blue-600 transition active:scale-95">
+                        <div class="relative p-2 bg-gray-100 rounded-full">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+                            </svg>
+                        </div>
+                        <span class="text-[9px] font-bold mt-0.5">บิลของฉัน</span>
+                    </button>
+
+                    <button @click="showCart = true" class="flex flex-col items-center justify-center text-blue-600 transition active:scale-95 relative">
+                        <div class="relative p-2 bg-blue-50 rounded-full border border-blue-100">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+                            </svg>
+                            <span
+                                x-text="cartTotalItems() > 9 ? '9+' : cartTotalItems()"
+                                :class="cartTotalItems() > 0
+                                    ? 'opacity-100 scale-100'
+                                    : 'opacity-0 scale-0 pointer-events-none'"
+                                class="
+                                    absolute top-0 right-0
+                                    translate-x-1/2 -translate-y-1/2
+                                    w-5 h-5
+                                    bg-red-500 text-white
+                                    text-[10px] font-bold
+                                    flex items-center justify-center
+                                    rounded-full
+                                    border-2 border-white
+                                    shadow-sm
+                                    transition-all duration-200 ease-out">
+                            </span>
+                            </span>
+                        </div>
+                        <span class="text-[9px] font-bold mt-0.5">สั่งอาหาร</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="px-4">
+                <div class="relative group">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-400 group-focus-within:text-blue-500 transition" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        </svg>
+                    </div>
+                    
+                    <input 
+                        x-model="search"
+                        type="text" 
+                        placeholder="ค้นหาเมนู (เช่น ข้าวผัด, ต้มยำ...)" 
+                        class="block w-full pl-10 pr-10 py-2.5 border-none rounded-xl bg-gray-100 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition shadow-inner sm:text-sm"
+                    >
+                    
+                    <button 
+                        x-show="search.length > 0" 
+                        @click="search = ''"
+                        x-transition
+                        class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 cursor-pointer">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
         </div>
 
-        <div class="p-4 space-y-8 max-w-2xl mx-auto">
+        <div class="p-4 space-y-6 max-w-2xl mx-auto min-h-[60vh]">
+            
+            <div x-show="isSearchEmpty()" x-cloak class="text-center py-12">
+                <div class="inline-block p-4 rounded-full bg-gray-100 mb-3">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                </div>
+                <p class="text-gray-500 text-sm">ไม่พบเมนูที่ค้นหา</p>
+                <button @click="search=''" class="text-blue-600 text-sm font-bold mt-2">แสดงเมนูทั้งหมด</button>
+            </div>
+
             {% for category in categories %}
-            <div id="cat-{{ category.id }}">
-                <h2 class="text-xl font-bold text-gray-800 mb-4 border-l-4 border-blue-500 pl-3 flex items-center justify-between">
+            <div id="cat-{{ category.id }}" 
+                 class="category-section search-transition"
+                 x-show="categoryMatches('{{ category.id }}')"
+            >
+                <h2 class="text-lg font-bold text-gray-800 mb-3 flex items-center gap-2 sticky top-32.5 z-0 bg-gray-50 py-1">
+                    <span class="w-1.5 h-6 bg-blue-500 rounded-full"></span>
                     {{ category.name }}
-                    <span class="text-xs font-normal text-gray-400 bg-gray-100 px-2 py-1 rounded-full">{{ category.items.all|length }} รายการ</span>
                 </h2>
                 
-                <div class="space-y-4">
+                <div class="space-y-3">
                     {% for item in category.items.all %}
                     {% if item.is_available %}
-                    <div class="bg-white p-3 rounded-xl shadow-sm flex gap-3 border border-gray-100 relative overflow-hidden">
-                        
-                        <div class="w-24 h-24 bg-gray-100 rounded-lg overflow-hidden shrink-0 relative border border-gray-200">
+                    <div class="bg-white p-3 rounded-xl shadow-sm border border-gray-100 flex gap-3 overflow-hidden relative group active:border-blue-200 transition search-transition"
+                         x-show="itemMatches('{{ item.name|escapejs }}')"
+                         data-category="{{ category.id }}"
+                    >
+                        <div class="w-24 h-24 bg-gray-100 rounded-lg overflow-hidden shrink-0 border border-gray-50">
                             {% if item.image %}
-                                <img src="{{ item.image.url }}" class="w-full h-full object-cover" loading="lazy">
+                                <img src="{{ item.image.url }}" class="w-full h-full object-cover group-hover:scale-105 transition duration-500" loading="lazy">
                             {% else %}
                                 <div class="w-full h-full flex flex-col items-center justify-center text-gray-300">
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                    </svg>
                                     <span class="text-[10px]">No Image</span>
                                 </div>
                             {% endif %}
@@ -69,16 +140,15 @@
                         
                         <div class="flex-1 flex flex-col justify-between py-0.5">
                             <div>
-                                <h3 class="font-bold text-gray-800 text-base leading-tight">{{ item.name }}</h3>
+                                <h3 class="font-bold text-gray-800 leading-tight line-clamp-1 text-base">{{ item.name }}</h3>
                                 <p class="text-xs text-gray-500 line-clamp-2 mt-1">{{ item.description }}</p>
                             </div>
-                            <div class="flex justify-between items-end mt-2">
+                            <div class="flex justify-between items-center mt-2">
                                 <span class="font-bold text-lg text-gray-800">฿{{ item.price|floatformat:0 }}</span>
-                                
                                 <button @click="addToCart({{ item.id }}, '{{ item.name|escapejs }}', {{ item.price }})" 
-                                        class="bg-blue-600 text-white px-4 py-1.5 rounded-full text-sm font-bold shadow-md hover:bg-blue-700 active:scale-95 active:bg-blue-800 transition flex items-center gap-1">
+                                        class="bg-gray-900 text-white px-3 py-1.5 rounded-full text-xs font-bold shadow hover:bg-black active:scale-95 transition flex items-center gap-1">
                                     <span>เพิ่ม</span>
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
                                     </svg>
                                 </button>
@@ -90,105 +160,130 @@
                 </div>
             </div>
             {% endfor %}
-            
-            <div class="text-center text-gray-300 text-xs mt-10 pb-4">
-                Powered by RPOS System
-            </div>
+            <div class="text-center text-gray-300 text-xs mt-10 pb-4">Powered by RPOS System</div>
         </div>
 
-        <div 
-            x-show="showCart" 
-            style="display: none;" 
-            class="fixed inset-0 z-50 flex items-end justify-center sm:items-center"
-        >
-            <div 
-                x-show="showCart"
-                x-transition:enter="transition ease-out duration-300"
-                x-transition:enter-start="opacity-0"
-                x-transition:enter-end="opacity-100"
-                x-transition:leave="transition ease-in duration-200"
-                x-transition:leave-start="opacity-100"
-                x-transition:leave-end="opacity-0"
-                @click="showCart = false"
-                class="absolute inset-0 bg-gray-900/60 backdrop-blur-sm transition-opacity"
-            ></div>
+        <div x-show="showCart" style="display: none;" class="fixed inset-0 z-50 flex items-end justify-center sm:items-center">
+            <div x-show="showCart" x-transition.opacity @click="showCart = false" class="absolute inset-0 bg-gray-900/60 backdrop-blur-sm"></div>
             
-            <div 
-                x-show="showCart"
-                x-transition:enter="transition ease-out duration-300 transform"
-                x-transition:enter-start="translate-y-full sm:translate-y-10 sm:scale-95 opacity-0"
-                x-transition:enter-end="translate-y-0 sm:scale-100 opacity-100"
-                x-transition:leave="transition ease-in duration-200 transform"
-                x-transition:leave-start="translate-y-0 sm:scale-100 opacity-100"
-                x-transition:leave-end="translate-y-full sm:translate-y-10 sm:scale-95 opacity-0"
-                class="relative w-full max-w-lg bg-white rounded-t-3xl sm:rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[85vh]"
-            >
-                <div class="flex justify-center pt-3 pb-1 bg-white cursor-pointer" @click="showCart = false">
+            <div x-show="showCart" x-transition:enter="transition ease-out duration-300 transform" x-transition:enter-start="translate-y-full" x-transition:enter-end="translate-y-0" x-transition:leave="transition ease-in duration-200 transform" x-transition:leave-start="translate-y-0" x-transition:leave-end="translate-y-full"
+                 class="relative w-full max-w-lg bg-white rounded-t-3xl sm:rounded-2xl shadow-2xl flex flex-col max-h-[85vh]">
+                
+                <div class="flex justify-center pt-3 pb-1" @click="showCart = false">
                     <div class="w-12 h-1.5 bg-gray-300 rounded-full"></div>
                 </div>
 
-                <div class="px-6 py-2 border-b border-gray-100 flex justify-between items-center bg-white">
-                    <div>
-                        <h2 class="text-xl font-bold text-gray-800">ตะกร้าของฉัน</h2>
-                        <p class="text-xs text-gray-500">โต๊ะ: <span class="font-bold text-blue-600">{{ table.name }}</span></p>
-                    </div>
-                    <button @click="showCart = false" class="p-2 bg-gray-100 rounded-full hover:bg-gray-200 text-gray-500 hover:text-gray-800 transition">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                    </button>
+                <div class="px-6 py-2 border-b border-gray-100 flex justify-between items-center">
+                    <h2 class="text-xl font-bold text-gray-800">ตะกร้า (รอสั่ง)</h2>
+                    <button @click="showCart = false" class="p-1 bg-gray-100 rounded-full text-gray-500">✕</button>
                 </div>
 
-                <div class="flex-1 overflow-y-auto p-4 bg-gray-50 space-y-3">
+                <div class="flex-1 overflow-y-auto p-4 space-y-3 bg-gray-50">
                     <template x-if="cart.length === 0">
                         <div class="flex flex-col items-center justify-center h-48 text-gray-400">
-                            <div class="bg-gray-100 p-4 rounded-full mb-3">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
-                                </svg>
-                            </div>
-                            <p class="text-sm">ยังไม่มีรายการอาหาร</p>
-                            <button @click="showCart = false" class="mt-4 text-blue-600 text-sm font-bold hover:underline">เลือกอาหาร</button>
+                            <p>ยังไม่มีรายการอาหาร</p>
+                            <button @click="showCart = false" class="mt-2 text-blue-600 text-sm font-bold">ไปเลือกอาหาร</button>
                         </div>
                     </template>
-
                     <template x-for="(item, index) in cart" :key="index">
                         <div class="flex justify-between items-center bg-white p-3 rounded-xl shadow-sm border border-gray-100">
-                            <div class="flex-1">
+                            <div>
                                 <p class="font-bold text-gray-800" x-text="item.name"></p>
-                                <p class="text-sm text-gray-500">฿<span x-text="item.price"></span> / จาน</p>
+                                <p class="text-xs text-gray-500">฿<span x-text="item.price"></span></p>
                             </div>
-                            <div class="flex items-center gap-3 bg-gray-50 p-1 rounded-lg border border-gray-200">
-                                <button @click="decreaseQty(index)" class="w-7 h-7 flex items-center justify-center rounded bg-white text-gray-600 shadow-sm hover:text-red-500 font-bold active:bg-gray-100 transition disabled:opacity-50">
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4" />
-                                    </svg>
-                                </button>
-                                <span class="font-bold w-4 text-center text-gray-800 text-sm" x-text="item.qty"></span>
-                                <button @click="increaseQty(index)" class="w-7 h-7 flex items-center justify-center rounded bg-white text-blue-600 shadow-sm hover:bg-blue-50 font-bold active:bg-blue-100 transition">
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-                                    </svg>
-                                </button>
+                            <div class="flex items-center gap-3 bg-gray-50 p-1 rounded-lg border">
+                                <button @click="decreaseQty(index)" class="w-7 h-7 bg-white rounded shadow-sm text-gray-600">-</button>
+                                <span class="font-bold w-4 text-center text-sm" x-text="item.qty"></span>
+                                <button @click="increaseQty(index)" class="w-7 h-7 bg-white rounded shadow-sm text-blue-600">+</button>
                             </div>
                         </div>
                     </template>
                 </div>
 
-                <div class="p-6 bg-white border-t border-gray-100 shadow-[0_-5px_20px_rgba(0,0,0,0.05)] z-20">
-                    <div class="flex justify-between text-base font-bold mb-4 items-center">
-                        <span class="text-gray-500 font-normal">ยอดรวมสุทธิ</span>
-                        <span class="text-2xl text-blue-600">฿<span x-text="cartTotalAmount()"></span></span>
+                <div class="p-6 bg-white border-t shadow-[0_-5px_20px_rgba(0,0,0,0.05)]">
+                    <div class="flex justify-between mb-4 items-center">
+                        <span class="text-gray-500">รวมทั้งสิ้น</span>
+                        <span class="text-2xl font-bold text-blue-600">฿<span x-text="cartTotalAmount()"></span></span>
                     </div>
-                    <button 
-                        @click="submitOrder()"
-                        :disabled="cart.length === 0"
-                        class="w-full bg-blue-600 text-white py-4 rounded-xl font-bold text-lg shadow-lg shadow-blue-200 hover:shadow-xl hover:bg-blue-700 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none flex items-center justify-center gap-2">
-                        <span>ยืนยันการสั่งอาหาร</span>
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                        </svg>
+                    <button @click="submitOrder()" :disabled="cart.length === 0" class="w-full bg-blue-600 text-white py-3.5 rounded-xl font-bold shadow-lg shadow-blue-200 active:scale-95 transition disabled:opacity-50">
+                        ยืนยันสั่งอาหาร
                     </button>
+                </div>
+            </div>
+        </div>
+
+        <div x-show="showHistory" style="display: none;" class="fixed inset-0 z-50 flex items-end justify-center sm:items-center">
+            <div x-show="showHistory" x-transition.opacity @click="showHistory = false" class="absolute inset-0 bg-gray-900/60 backdrop-blur-sm"></div>
+            
+            <div x-show="showHistory" x-transition:enter="transition ease-out duration-300 transform" x-transition:enter-start="translate-y-full" x-transition:enter-end="translate-y-0" x-transition:leave="transition ease-in duration-200 transform" x-transition:leave-start="translate-y-0" x-transition:leave-end="translate-y-full"
+                 class="relative w-full max-w-lg bg-white rounded-t-3xl sm:rounded-2xl shadow-2xl flex flex-col max-h-[90vh]">
+                
+                <div class="flex justify-center pt-3 pb-1" @click="showHistory = false">
+                    <div class="w-12 h-1.5 bg-gray-300 rounded-full"></div>
+                </div>
+
+                <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
+                    <div>
+                        <h2 class="text-xl font-bold text-gray-800">รายการที่สั่งแล้ว</h2>
+                        <p class="text-xs text-gray-500">โต๊ะ: {{ table.name }}</p>
+                    </div>
+                    <button @click="fetchHistory()" class="text-blue-600 text-xs font-bold flex items-center gap-1 hover:bg-blue-50 px-2 py-1 rounded">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                        </svg>
+                        รีเฟรช
+                    </button>
+                </div>
+
+                <div class="flex-1 overflow-y-auto p-4 space-y-3 bg-white">
+                    <template x-if="historyLoading">
+                        <div class="text-center py-10 text-gray-400">กำลังโหลดข้อมูล...</div>
+                    </template>
+                    <template x-if="!historyLoading && historyItems.length === 0">
+                        <div class="text-center py-10 text-gray-400 flex flex-col items-center">
+                            <span class="text-4xl mb-2">🍽️</span>
+                            <p>ยังไม่ได้สั่งอาหาร</p>
+                        </div>
+                    </template>
+                    <template x-for="(item, index) in historyItems" :key="index">
+                        <div class="flex justify-between bg-white border border-gray-100 p-3 rounded-xl shadow-sm">
+                            <div class="flex-1">
+                                <div class="flex items-start justify-between">
+                                    <h3 class="font-bold text-gray-800" x-text="item.name"></h3>
+                                    <span class="text-xs text-gray-400" x-text="item.time"></span>
+                                </div>
+                                <div class="flex items-center gap-2 mt-1">
+                                    <span class="text-sm text-gray-600">x<span x-text="item.quantity" class="font-bold"></span></span>
+                                    <span class="text-sm text-gray-400">|</span>
+                                    <span class="text-sm text-gray-600">฿<span x-text="item.total"></span></span>
+                                </div>
+                            </div>
+                            <div class="flex items-center pl-3">
+                                <span class="px-2 py-1 rounded-lg text-[10px] font-bold border"
+                                      :class="{
+                                          'bg-yellow-50 text-yellow-600 border-yellow-100': item.status_code === 'PENDING',
+                                          'bg-blue-50 text-blue-600 border-blue-100': item.status_code === 'COOKING',
+                                          'bg-green-50 text-green-600 border-green-100': item.status_code === 'SERVED' || item.status_code === 'COMPLETED'
+                                      }"
+                                      x-text="item.status">
+                                </span>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+
+                <div class="p-6 bg-gray-900 text-white rounded-t-2xl shadow-lg mt-auto">
+                    <div class="flex justify-between items-center">
+                        <div>
+                            <p class="text-gray-400 text-xs uppercase">ยอดรวมทั้งหมด (Grand Total)</p>
+                            <p class="text-2xl font-bold">฿<span x-text="historyTotal"></span></p>
+                        </div>
+                        <div class="text-right">
+                             <button @click="showHistory = false" class="bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded-lg text-sm transition">
+                                 ปิดหน้าต่าง
+                             </button>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -199,71 +294,113 @@
         function foodMenu() {
             return {
                 showCart: false,
+                showHistory: false,
+                search: '', // ตัวแปรเก็บคำค้นหา
                 cart: [],
+                historyItems: [],
+                historyTotal: 0,
+                historyLoading: false,
 
+                // --- Search Logic (เพิ่มเติม) ---
+                initSearch() {
+                    // ทำงานเมื่อมีการพิมพ์ค้นหา
+                    this.$watch('search', value => {
+                        // Alpine.js จะอัปเดต x-show เองโดยอัตโนมัติ
+                    });
+                },
+                
+                itemMatches(itemName) {
+                    if (this.search === '') return true;
+                    return itemName.toLowerCase().includes(this.search.toLowerCase());
+                },
+                
+                // ฟังก์ชันเช็คว่าหมวดหมู่นี้มีเมนูที่ค้นหาเจอไหม (ถ้าไม่มีเลย ให้ซ่อนหมวดหมู่)
+                categoryMatches(catId) {
+                    if (this.search === '') return true;
+                    // หา elements ในหมวดหมู่นี้ที่แสดงอยู่ (โดยดูจาก data-category)
+                    // หมายเหตุ: วิธีนี้ใช้ DOM selector เพื่อความชัวร์
+                    const items = document.querySelectorAll(`div[data-category="${catId}"]`);
+                    for (let item of items) {
+                         // item.firstElementChild... คือการเข้าถึง h3 หรือชื่ออาหาร
+                         // แต่วิธีที่ง่ายกว่าคือเรียก itemMatches อีกที
+                         // ในที่นี้เราใช้ logic ง่ายๆ: ถ้ามี item ไหนผ่าน filter ให้แสดงหมวดหมู่
+                         let name = item.querySelector('h3').innerText; 
+                         if (name.toLowerCase().includes(this.search.toLowerCase())) {
+                             return true;
+                         }
+                    }
+                    return false;
+                },
+
+                isSearchEmpty() {
+                     if (this.search === '') return false;
+                     // เช็คว่ามีรายการไหนโชว์บ้างไหม
+                     const allItems = document.querySelectorAll('[data-category]');
+                     for (let item of allItems) {
+                         let name = item.querySelector('h3').innerText;
+                         if (name.toLowerCase().includes(this.search.toLowerCase())) return false;
+                     }
+                     return true;
+                },
+
+                // --- Cart Logic (คงเดิม) ---
                 addToCart(id, name, price) {
                     let existingItem = this.cart.find(item => item.id === id);
-                    if (existingItem) {
-                        existingItem.qty++;
-                    } else {
-                        this.cart.push({ id: id, name: name, price: price, qty: 1 });
-                    }
-                    if (navigator.vibrate) navigator.vibrate(30); // สั่นเบาๆ
+                    if (existingItem) existingItem.qty++;
+                    else this.cart.push({ id: id, name: name, price: price, qty: 1 });
+                    if (navigator.vibrate) navigator.vibrate(30);
                 },
-
-                increaseQty(index) {
-                    this.cart[index].qty++;
-                },
-
+                increaseQty(index) { this.cart[index].qty++; },
                 decreaseQty(index) {
-                    if (this.cart[index].qty > 1) {
-                        this.cart[index].qty--;
-                    } else {
-                        if(confirm('ลบรายการนี้ออกจากตะกร้า?')) {
-                            this.cart.splice(index, 1);
-                        }
-                    }
+                    if (this.cart[index].qty > 1) this.cart[index].qty--;
+                    else if(confirm('ลบรายการนี้?')) this.cart.splice(index, 1);
                 },
-
-                cartTotalItems() {
-                    return this.cart.reduce((total, item) => total + item.qty, 0);
-                },
-
-                cartTotalAmount() {
-                    return this.cart.reduce((total, item) => total + (item.price * item.qty), 0).toFixed(0);
-                },
+                cartTotalItems() { return this.cart.reduce((t, i) => t + i.qty, 0); },
+                cartTotalAmount() { return this.cart.reduce((t, i) => t + (i.price * i.qty), 0).toFixed(0); },
 
                 submitOrder() {
                     if(this.cart.length === 0) return;
-                    if(!confirm('ยืนยันการสั่งอาหารทั้งหมด ' + this.cartTotalItems() + ' รายการ?')) return;
-
-                    const payload = {
-                        table_uuid: '{{ table.uuid }}',
-                        cart: this.cart
-                    };
+                    if(!confirm('ยืนยันการสั่งอาหาร?')) return;
 
                     fetch('/orders/api/create/', {
                         method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            // 'X-CSRFToken': '{{ csrf_token }}' // ใช้กรณีเอา csrf_exempt ออก
-                        },
-                        body: JSON.stringify(payload)
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ table_uuid: '{{ table.uuid }}', cart: this.cart })
                     })
-                    .then(response => response.json())
+                    .then(res => res.json())
                     .then(data => {
                         if (data.success) {
-                            // แจ้งเตือนสวยๆ (หรือใช้ alert ธรรมดา)
-                            alert('✅ สั่งอาหารเรียบร้อย!\nรายการอาหารจะถูกส่งไปที่ครัวทันที');
+                            alert('✅ สั่งอาหารเรียบร้อย!');
                             this.cart = [];
                             this.showCart = false;
+                            this.openHistory(); 
                         } else {
-                            alert('❌ เกิดข้อผิดพลาด: ' + data.error);
+                            alert('❌ Error: ' + data.error);
                         }
                     })
-                    .catch(error => {
-                        console.error('Error:', error);
-                        alert('⚠️ ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้');
+                    .catch(err => alert('⚠️ Connection Error'));
+                },
+
+                // --- History Logic (คงเดิม) ---
+                openHistory() {
+                    this.showHistory = true;
+                    this.fetchHistory();
+                },
+
+                fetchHistory() {
+                    this.historyLoading = true;
+                    fetch(`/orders/api/history/?table_uuid={{ table.uuid }}`)
+                    .then(res => res.json())
+                    .then(data => {
+                        this.historyLoading = false;
+                        if(data.success) {
+                            this.historyItems = data.items;
+                            this.historyTotal = data.grand_total.toFixed(0);
+                        }
+                    })
+                    .catch(err => {
+                        this.historyLoading = false;
+                        console.error(err);
                     });
                 }
             }
@@ -271,3 +408,7 @@
     </script>
 </body>
 </html>
+
+
+
+
