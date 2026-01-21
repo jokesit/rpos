@@ -1,16 +1,17 @@
+{% load static tailwind_tags %}
 <!DOCTYPE html>
 <html lang="th">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Server Error (500)</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    {% tailwind_css %}
 </head>
 <body class="bg-gray-50 font-sans">
     <div class="min-h-screen flex flex-col items-center justify-center text-center px-4">
         <div class="text-9xl font-extrabold text-red-100">500</div>
         
-        <div class="absolute mt-[-50px]">
+        <div class="absolute -mt-12.5">
             <div class="bg-red-100 p-4 rounded-full inline-block mb-4">
                 <span class="text-4xl">🛠️</span>
             </div>

@@ -1,30 +1,34 @@
-{% load static %}
+{% load static tailwind_tags %}
 <!DOCTYPE html>
-<html lang="th">
-<head>
+<html lang="th" class="scroll-smooth"> <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>เมนูอาหาร - {{ restaurant.name }}</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    {% tailwind_css %}
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <style>
         body { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
         [x-cloak] { display: none !important; }
-        /* Hide Scrollbar */
+        
+        /* ซ่อน Scrollbar แต่ยังเลื่อนได้ (สำคัญมากสำหรับดีไซน์นี้) */
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         
-        /* Smooth Fade for Search items */
         .search-transition { transition: all 0.3s ease; }
+
+        /* ป้องกันหัวข้อจมใต้ Header เวลาคลิก */
+        .scroll-mt-custom {
+            scroll-margin-top: 200px; /* ค่านี้ต้องมากกว่าความสูงของ Header รวม */
+        }
     </style>
 </head>
 <body class="bg-gray-50 text-gray-800 antialiased font-sans">
 
     <div x-data="foodMenu()" x-init="fetchHistory(); initSearch()" class="pb-24 min-h-screen relative">
         
-        <div class="bg-white shadow-md sticky top-0 z-30 pb-3">
+        <div class="bg-white shadow-md sticky top-0 z-30">
             
-            <div class="px-4 py-3 flex justify-between items-center border-b border-gray-100 mb-2">
+            <div class="px-4 py-3 flex justify-between items-center border-b border-gray-100">
                 <div>
                     <h1 class="font-bold text-lg text-gray-900 leading-tight">{{ restaurant.name }}</h1>
                     <div class="flex items-center gap-2 mt-0.5">
@@ -64,14 +68,13 @@
                                     shadow-sm
                                     transition-all duration-200 ease-out">
                             </span>
-                            </span>
                         </div>
                         <span class="text-[9px] font-bold mt-0.5">สั่งอาหาร</span>
                     </button>
                 </div>
             </div>
 
-            <div class="px-4">
+            <div class="px-4 py-2 bg-white">
                 <div class="relative group">
                     <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-400 group-focus-within:text-blue-500 transition" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -83,23 +86,41 @@
                         x-model="search"
                         type="text" 
                         placeholder="ค้นหาเมนู (เช่น ข้าวผัด, ต้มยำ...)" 
-                        class="block w-full pl-10 pr-10 py-2.5 border-none rounded-xl bg-gray-100 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition shadow-inner sm:text-sm"
+                        class="block w-full pl-10 pr-10 py-2 border-none rounded-xl bg-gray-100 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition shadow-inner sm:text-sm"
                     >
                     
-                    <button 
-                        x-show="search.length > 0" 
-                        @click="search = ''"
-                        x-transition
-                        class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 cursor-pointer">
+                    <button x-show="search.length > 0" @click="search = ''" class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 cursor-pointer">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                             <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
                         </svg>
                     </button>
                 </div>
             </div>
-        </div>
 
-        <div class="p-4 space-y-6 max-w-2xl mx-auto min-h-[60vh]">
+            <div class="flex overflow-x-auto gap-2 px-4 pb-3 pt-1 no-scrollbar bg-white border-b border-gray-100 items-center">
+                
+                <button 
+                    @click="scrollToCategory('all')"
+                    :class="activeCategory === 'all' ? 'bg-gray-900 text-white shadow-lg scale-105' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'"
+                    class="whitespace-nowrap px-4 py-1.5 rounded-full text-xs font-bold transition-all duration-200 shrink-0"
+                >
+                    ทั้งหมด
+                </button>
+
+                {% for category in categories %}
+                <button 
+                    x-show="categoryMatches('{{ category.id }}')"
+                    @click="scrollToCategory('cat-{{ category.id }}')"
+                    :class="activeCategory === 'cat-{{ category.id }}' ? 'bg-blue-600 text-white shadow-lg scale-105' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'"
+                    class="whitespace-nowrap px-4 py-1.5 rounded-full text-xs font-bold transition-all duration-200 shrink-0"
+                >
+                    {{ category.name }}
+                </button>
+                {% endfor %}
+            </div>
+
+        </div>
+        <div class="p-4 space-y-8 max-w-2xl mx-auto min-h-[60vh]">
             
             <div x-show="isSearchEmpty()" x-cloak class="text-center py-12">
                 <div class="inline-block p-4 rounded-full bg-gray-100 mb-3">
@@ -113,12 +134,13 @@
 
             {% for category in categories %}
             <div id="cat-{{ category.id }}" 
-                 class="category-section search-transition"
+                 class="category-section search-transition scroll-mt-custom"
                  x-show="categoryMatches('{{ category.id }}')"
             >
-                <h2 class="text-lg font-bold text-gray-800 mb-3 flex items-center gap-2 sticky top-32.5 z-0 bg-gray-50 py-1">
+                <h2 class="text-lg font-bold text-gray-800 mb-3 flex items-center gap-2">
                     <span class="w-1.5 h-6 bg-blue-500 rounded-full"></span>
                     {{ category.name }}
+                    <span class="text-[10px] text-gray-400 font-normal">({{ category.items.all|length }})</span>
                 </h2>
                 
                 <div class="space-y-3">
@@ -163,21 +185,15 @@
             <div class="text-center text-gray-300 text-xs mt-10 pb-4">Powered by RPOS System</div>
         </div>
 
+
         <div x-show="showCart" style="display: none;" class="fixed inset-0 z-50 flex items-end justify-center sm:items-center">
             <div x-show="showCart" x-transition.opacity @click="showCart = false" class="absolute inset-0 bg-gray-900/60 backdrop-blur-sm"></div>
-            
-            <div x-show="showCart" x-transition:enter="transition ease-out duration-300 transform" x-transition:enter-start="translate-y-full" x-transition:enter-end="translate-y-0" x-transition:leave="transition ease-in duration-200 transform" x-transition:leave-start="translate-y-0" x-transition:leave-end="translate-y-full"
-                 class="relative w-full max-w-lg bg-white rounded-t-3xl sm:rounded-2xl shadow-2xl flex flex-col max-h-[85vh]">
-                
-                <div class="flex justify-center pt-3 pb-1" @click="showCart = false">
-                    <div class="w-12 h-1.5 bg-gray-300 rounded-full"></div>
-                </div>
-
+            <div x-show="showCart" x-transition:enter="transition ease-out duration-300 transform" x-transition:enter-start="translate-y-full" x-transition:enter-end="translate-y-0" x-transition:leave="transition ease-in duration-200 transform" x-transition:leave-start="translate-y-0" x-transition:leave-end="translate-y-full" class="relative w-full max-w-lg bg-white rounded-t-3xl sm:rounded-2xl shadow-2xl flex flex-col max-h-[85vh]">
+                <div class="flex justify-center pt-3 pb-1" @click="showCart = false"><div class="w-12 h-1.5 bg-gray-300 rounded-full"></div></div>
                 <div class="px-6 py-2 border-b border-gray-100 flex justify-between items-center">
                     <h2 class="text-xl font-bold text-gray-800">ตะกร้า (รอสั่ง)</h2>
                     <button @click="showCart = false" class="p-1 bg-gray-100 rounded-full text-gray-500">✕</button>
                 </div>
-
                 <div class="flex-1 overflow-y-auto p-4 space-y-3 bg-gray-50">
                     <template x-if="cart.length === 0">
                         <div class="flex flex-col items-center justify-center h-48 text-gray-400">
@@ -187,104 +203,37 @@
                     </template>
                     <template x-for="(item, index) in cart" :key="index">
                         <div class="flex justify-between items-center bg-white p-3 rounded-xl shadow-sm border border-gray-100">
-                            <div>
-                                <p class="font-bold text-gray-800" x-text="item.name"></p>
-                                <p class="text-xs text-gray-500">฿<span x-text="item.price"></span></p>
-                            </div>
-                            <div class="flex items-center gap-3 bg-gray-50 p-1 rounded-lg border">
-                                <button @click="decreaseQty(index)" class="w-7 h-7 bg-white rounded shadow-sm text-gray-600">-</button>
-                                <span class="font-bold w-4 text-center text-sm" x-text="item.qty"></span>
-                                <button @click="increaseQty(index)" class="w-7 h-7 bg-white rounded shadow-sm text-blue-600">+</button>
-                            </div>
+                            <div><p class="font-bold text-gray-800" x-text="item.name"></p><p class="text-xs text-gray-500">฿<span x-text="item.price"></span></p></div>
+                            <div class="flex items-center gap-3 bg-gray-50 p-1 rounded-lg border"><button @click="decreaseQty(index)" class="w-7 h-7 bg-white rounded shadow-sm text-gray-600">-</button><span class="font-bold w-4 text-center text-sm" x-text="item.qty"></span><button @click="increaseQty(index)" class="w-7 h-7 bg-white rounded shadow-sm text-blue-600">+</button></div>
                         </div>
                     </template>
                 </div>
-
                 <div class="p-6 bg-white border-t shadow-[0_-5px_20px_rgba(0,0,0,0.05)]">
-                    <div class="flex justify-between mb-4 items-center">
-                        <span class="text-gray-500">รวมทั้งสิ้น</span>
-                        <span class="text-2xl font-bold text-blue-600">฿<span x-text="cartTotalAmount()"></span></span>
-                    </div>
-                    <button @click="submitOrder()" :disabled="cart.length === 0" class="w-full bg-blue-600 text-white py-3.5 rounded-xl font-bold shadow-lg shadow-blue-200 active:scale-95 transition disabled:opacity-50">
-                        ยืนยันสั่งอาหาร
-                    </button>
+                    <div class="flex justify-between mb-4 items-center"><span class="text-gray-500">รวมทั้งสิ้น</span><span class="text-2xl font-bold text-blue-600">฿<span x-text="cartTotalAmount()"></span></span></div>
+                    <button @click="submitOrder()" :disabled="cart.length === 0" class="w-full bg-blue-600 text-white py-3.5 rounded-xl font-bold shadow-lg shadow-blue-200 active:scale-95 transition disabled:opacity-50">ยืนยันสั่งอาหาร</button>
                 </div>
             </div>
         </div>
 
         <div x-show="showHistory" style="display: none;" class="fixed inset-0 z-50 flex items-end justify-center sm:items-center">
             <div x-show="showHistory" x-transition.opacity @click="showHistory = false" class="absolute inset-0 bg-gray-900/60 backdrop-blur-sm"></div>
-            
-            <div x-show="showHistory" x-transition:enter="transition ease-out duration-300 transform" x-transition:enter-start="translate-y-full" x-transition:enter-end="translate-y-0" x-transition:leave="transition ease-in duration-200 transform" x-transition:leave-start="translate-y-0" x-transition:leave-end="translate-y-full"
-                 class="relative w-full max-w-lg bg-white rounded-t-3xl sm:rounded-2xl shadow-2xl flex flex-col max-h-[90vh]">
-                
-                <div class="flex justify-center pt-3 pb-1" @click="showHistory = false">
-                    <div class="w-12 h-1.5 bg-gray-300 rounded-full"></div>
-                </div>
-
+            <div x-show="showHistory" x-transition:enter="transition ease-out duration-300 transform" x-transition:enter-start="translate-y-full" x-transition:enter-end="translate-y-0" x-transition:leave="transition ease-in duration-200 transform" x-transition:leave-start="translate-y-0" x-transition:leave-end="translate-y-full" class="relative w-full max-w-lg bg-white rounded-t-3xl sm:rounded-2xl shadow-2xl flex flex-col max-h-[90vh]">
+                <div class="flex justify-center pt-3 pb-1" @click="showHistory = false"><div class="w-12 h-1.5 bg-gray-300 rounded-full"></div></div>
                 <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
-                    <div>
-                        <h2 class="text-xl font-bold text-gray-800">รายการที่สั่งแล้ว</h2>
-                        <p class="text-xs text-gray-500">โต๊ะ: {{ table.name }}</p>
-                    </div>
-                    <button @click="fetchHistory()" class="text-blue-600 text-xs font-bold flex items-center gap-1 hover:bg-blue-50 px-2 py-1 rounded">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                        </svg>
-                        รีเฟรช
-                    </button>
+                    <div><h2 class="text-xl font-bold text-gray-800">รายการที่สั่งแล้ว</h2><p class="text-xs text-gray-500">โต๊ะ: {{ table.name }}</p></div>
+                    <button @click="fetchHistory()" class="text-blue-600 text-xs font-bold flex items-center gap-1 hover:bg-blue-50 px-2 py-1 rounded">🔄 รีเฟรช</button>
                 </div>
-
                 <div class="flex-1 overflow-y-auto p-4 space-y-3 bg-white">
-                    <template x-if="historyLoading">
-                        <div class="text-center py-10 text-gray-400">กำลังโหลดข้อมูล...</div>
-                    </template>
-                    <template x-if="!historyLoading && historyItems.length === 0">
-                        <div class="text-center py-10 text-gray-400 flex flex-col items-center">
-                            <span class="text-4xl mb-2">🍽️</span>
-                            <p>ยังไม่ได้สั่งอาหาร</p>
-                        </div>
-                    </template>
+                    <template x-if="historyLoading"><div class="text-center py-10 text-gray-400">กำลังโหลดข้อมูล...</div></template>
+                    <template x-if="!historyLoading && historyItems.length === 0"><div class="text-center py-10 text-gray-400 flex flex-col items-center"><span class="text-4xl mb-2">🍽️</span><p>ยังไม่ได้สั่งอาหาร</p></div></template>
                     <template x-for="(item, index) in historyItems" :key="index">
                         <div class="flex justify-between bg-white border border-gray-100 p-3 rounded-xl shadow-sm">
-                            <div class="flex-1">
-                                <div class="flex items-start justify-between">
-                                    <h3 class="font-bold text-gray-800" x-text="item.name"></h3>
-                                    <span class="text-xs text-gray-400" x-text="item.time"></span>
-                                </div>
-                                <div class="flex items-center gap-2 mt-1">
-                                    <span class="text-sm text-gray-600">x<span x-text="item.quantity" class="font-bold"></span></span>
-                                    <span class="text-sm text-gray-400">|</span>
-                                    <span class="text-sm text-gray-600">฿<span x-text="item.total"></span></span>
-                                </div>
-                            </div>
-                            <div class="flex items-center pl-3">
-                                <span class="px-2 py-1 rounded-lg text-[10px] font-bold border"
-                                      :class="{
-                                          'bg-yellow-50 text-yellow-600 border-yellow-100': item.status_code === 'PENDING',
-                                          'bg-blue-50 text-blue-600 border-blue-100': item.status_code === 'COOKING',
-                                          'bg-green-50 text-green-600 border-green-100': item.status_code === 'SERVED' || item.status_code === 'COMPLETED'
-                                      }"
-                                      x-text="item.status">
-                                </span>
-                            </div>
+                            <div class="flex-1"><div class="flex items-start justify-between"><h3 class="font-bold text-gray-800" x-text="item.name"></h3><span class="text-xs text-gray-400" x-text="item.time"></span></div><div class="flex items-center gap-2 mt-1"><span class="text-sm text-gray-600">x<span x-text="item.quantity" class="font-bold"></span></span><span class="text-sm text-gray-400">|</span><span class="text-sm text-gray-600">฿<span x-text="item.total"></span></span></div></div>
+                            <div class="flex items-center pl-3"><span class="px-2 py-1 rounded-lg text-[10px] font-bold border" :class="{'bg-yellow-50 text-yellow-600 border-yellow-100': item.status_code === 'PENDING', 'bg-blue-50 text-blue-600 border-blue-100': item.status_code === 'COOKING', 'bg-green-50 text-green-600 border-green-100': item.status_code === 'SERVED' || item.status_code === 'COMPLETED'}" x-text="item.status"></span></div>
                         </div>
                     </template>
                 </div>
-
-                <div class="p-6 bg-gray-900 text-white rounded-t-2xl shadow-lg mt-auto">
-                    <div class="flex justify-between items-center">
-                        <div>
-                            <p class="text-gray-400 text-xs uppercase">ยอดรวมทั้งหมด (Grand Total)</p>
-                            <p class="text-2xl font-bold">฿<span x-text="historyTotal"></span></p>
-                        </div>
-                        <div class="text-right">
-                             <button @click="showHistory = false" class="bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded-lg text-sm transition">
-                                 ปิดหน้าต่าง
-                             </button>
-                        </div>
-                    </div>
-                </div>
+                <div class="p-6 bg-gray-900 text-white rounded-t-2xl shadow-lg mt-auto"><div class="flex justify-between items-center"><div><p class="text-gray-400 text-xs uppercase">ยอดรวมทั้งหมด</p><p class="text-2xl font-bold">฿<span x-text="historyTotal"></span></p></div><div class="text-right"><button @click="showHistory = false" class="bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded-lg text-sm transition">ปิดหน้าต่าง</button></div></div></div>
             </div>
         </div>
 
@@ -295,46 +244,51 @@
             return {
                 showCart: false,
                 showHistory: false,
-                search: '', // ตัวแปรเก็บคำค้นหา
+                search: '',
+                activeCategory: 'all', // ⭐ เพิ่มตัวแปรเช็คว่าเลือกหมวดไหนอยู่
                 cart: [],
                 historyItems: [],
                 historyTotal: 0,
                 historyLoading: false,
 
-                // --- Search Logic (เพิ่มเติม) ---
                 initSearch() {
-                    // ทำงานเมื่อมีการพิมพ์ค้นหา
-                    this.$watch('search', value => {
-                        // Alpine.js จะอัปเดต x-show เองโดยอัตโนมัติ
-                    });
+                    this.$watch('search', value => {});
                 },
                 
+                // ⭐ ฟังก์ชันเลื่อนหน้าจอไปยังหมวดหมู่
+                scrollToCategory(catId) {
+                    this.activeCategory = catId;
+                    
+                    if (catId === 'all') {
+                        // เลื่อนไปบนสุด
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                    } else {
+                        // เลื่อนไปที่ ID นั้น
+                        const element = document.getElementById(catId);
+                        if (element) {
+                            // การเลื่อนแบบนี้จะคำนึงถึง scroll-margin-top ที่เราตั้งใน CSS
+                            element.scrollIntoView({ behavior: 'smooth' });
+                        }
+                    }
+                },
+
                 itemMatches(itemName) {
                     if (this.search === '') return true;
                     return itemName.toLowerCase().includes(this.search.toLowerCase());
                 },
                 
-                // ฟังก์ชันเช็คว่าหมวดหมู่นี้มีเมนูที่ค้นหาเจอไหม (ถ้าไม่มีเลย ให้ซ่อนหมวดหมู่)
                 categoryMatches(catId) {
                     if (this.search === '') return true;
-                    // หา elements ในหมวดหมู่นี้ที่แสดงอยู่ (โดยดูจาก data-category)
-                    // หมายเหตุ: วิธีนี้ใช้ DOM selector เพื่อความชัวร์
                     const items = document.querySelectorAll(`div[data-category="${catId}"]`);
                     for (let item of items) {
-                         // item.firstElementChild... คือการเข้าถึง h3 หรือชื่ออาหาร
-                         // แต่วิธีที่ง่ายกว่าคือเรียก itemMatches อีกที
-                         // ในที่นี้เราใช้ logic ง่ายๆ: ถ้ามี item ไหนผ่าน filter ให้แสดงหมวดหมู่
                          let name = item.querySelector('h3').innerText; 
-                         if (name.toLowerCase().includes(this.search.toLowerCase())) {
-                             return true;
-                         }
+                         if (name.toLowerCase().includes(this.search.toLowerCase())) return true;
                     }
                     return false;
                 },
 
                 isSearchEmpty() {
                      if (this.search === '') return false;
-                     // เช็คว่ามีรายการไหนโชว์บ้างไหม
                      const allItems = document.querySelectorAll('[data-category]');
                      for (let item of allItems) {
                          let name = item.querySelector('h3').innerText;
@@ -343,7 +297,7 @@
                      return true;
                 },
 
-                // --- Cart Logic (คงเดิม) ---
+                // --- Cart Logic ---
                 addToCart(id, name, price) {
                     let existingItem = this.cart.find(item => item.id === id);
                     if (existingItem) existingItem.qty++;
@@ -381,12 +335,11 @@
                     .catch(err => alert('⚠️ Connection Error'));
                 },
 
-                // --- History Logic (คงเดิม) ---
+                // --- History Logic ---
                 openHistory() {
                     this.showHistory = true;
                     this.fetchHistory();
                 },
-
                 fetchHistory() {
                     this.historyLoading = true;
                     fetch(`/orders/api/history/?table_uuid={{ table.uuid }}`)
