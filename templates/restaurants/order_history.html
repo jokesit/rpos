@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+{% load humanize %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50 pb-10">
+
+    <div class="mb-3">
+        <a href="{% url 'analytics_dashboard' %}" class="text-gray-500 hover:text-blue-600 font-medium">
+                &larr; กลับหน้า Dashboard
+    </a>
+
+    </div>
+    
+    <div class="bg-white border-b shadow-sm sticky top-0 z-20">
+        
+        <div class="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
+            <h1 class="text-2xl font-bold text-gray-800 flex items-center gap-2">
+                🗂️ ประวัติการขายทั้งหมด
+            </h1>
+            
+        </div>
+    </div>
+
+    <div class="max-w-7xl mx-auto px-4 py-8">
+        <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+            <table class="w-full text-sm text-left">
+                <thead class="text-gray-500 bg-gray-50 border-b uppercase text-xs">
+                    <tr>
+                        <th class="px-6 py-3">ID</th>
+                        <th class="px-6 py-3">เวลา</th>
+                        <th class="px-6 py-3">โต๊ะ</th>
+                        <th class="px-6 py-3 text-right">ยอดสุทธิ</th>
+                        <th class="px-6 py-3 text-center">ชำระโดย</th>
+                        <th class="px-6 py-3 text-center">จัดการ</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100">
+                    {% for order in page_obj %}
+                    <tr class="hover:bg-gray-50 transition">
+                        <td class="px-6 py-4 font-medium text-gray-900">#{{ order.id }}</td>
+                        <td class="px-6 py-4 text-gray-500">{{ order.created_at|date:"d M Y, H:i" }}</td>
+                        <td class="px-6 py-4 font-bold text-gray-700">{{ order.table.name }}</td>
+                        <td class="px-6 py-4 text-right font-bold text-blue-600">฿{{ order.total_price|floatformat:0|intcomma }}</td>
+                        <td class="px-6 py-4 text-center">
+                            <span class="px-2 py-1 rounded-full text-xs border 
+                                {% if order.payment_method == 'QR' %}bg-blue-50 text-blue-600 border-blue-100
+                                {% else %}bg-green-50 text-green-600 border-green-100{% endif %}">
+                                {{ order.payment_method|default:"เงินสด" }}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 text-center">
+                            <button type="button" 
+                                    onclick="event.stopPropagation(); openOrderDetail('{{ order.id }}')" 
+                                    class="text-blue-600 hover:underline font-bold text-xs">
+                                ดูรายละเอียด
+                            </button>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="px-6 py-12 text-center text-gray-400">ไม่พบรายการประวัติการขาย</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {% if page_obj.has_other_pages %}
+        <div class="flex justify-center mt-6 gap-2">
+            {% if page_obj.has_previous %}
+                <a href="?page={{ page_obj.previous_page_number }}" class="px-4 py-2 bg-white border rounded-lg hover:bg-gray-50 text-sm">ก่อนหน้า</a>
+            {% endif %}
+            
+            <span class="px-4 py-2 bg-blue-50 text-blue-600 font-bold border border-blue-100 rounded-lg text-sm">
+                หน้า {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}
+            </span>
+
+            {% if page_obj.has_next %}
+                <a href="?page={{ page_obj.next_page_number }}" class="px-4 py-2 bg-white border rounded-lg hover:bg-gray-50 text-sm">ถัดไป</a>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+{% include "restaurants/partials/order_detail_modal.html" %}
+
+{% endblock %}

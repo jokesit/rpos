@@ -1,10 +1,12 @@
+import datetime
+import json
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from .models import Table, Category, MenuItem, Restaurant
 from .forms import RestaurantForm, CategoryForm, MenuItemForm, RestaurantSettingsForm, PromoImageFormSet
-from django.db.models import Sum, Count
-from django.db.models.functions import TruncDate
+from django.db.models import Sum, Count, F, Avg
+from django.db.models.functions import TruncDate, TruncHour
 from decimal import Decimal
 from django.utils import timezone
 from django.core.exceptions import ObjectDoesNotExist
@@ -14,7 +16,8 @@ from orders.models import OrderItem, Order
 from django.contrib.auth.decorators import user_passes_test
 from django.views.decorators.http import require_POST
 from .decorators import restaurant_active_required
-
+from django.core.paginator import Paginator
+from django.http import JsonResponse
 
 
 @user_passes_test(lambda u: u.is_superuser) # เฉพาะ Superuser เท่านั้น
@@ -382,30 +385,46 @@ def close_bill(request, table_id):
         restaurant = request.user.restaurant
         table = get_object_or_404(Table, id=table_id, restaurant=restaurant)
         
+        # 1. ✅ รับค่าวิธีชำระเงินจาก Form (ถ้าไม่ส่งมา ให้ Default เป็น CASH)
+        payment_method = request.POST.get('payment_method', 'CASH')
+        
         # ดึงออเดอร์ที่ยังไม่จ่ายทั้งหมดมาปิด
         active_orders = table.orders.filter(is_paid=False).exclude(status='CANCELLED')
         
         if active_orders.exists():
-            # Update ทีเดียวทุก Rows (Bulk Update)
+            # 2. ✅ Update ข้อมูลรวมถึง payment_method ทีเดียวทุก Rows (Bulk Update)
             active_orders.update(
                 is_paid=True, 
                 status='COMPLETED',
+                payment_method=payment_method, # บันทึกว่าจ่ายด้วยอะไร (CASH/QR)
                 updated_at=timezone.now()
             )
             
+            # รีเซ็ต UUID โต๊ะ เพื่อให้ Link เก่าใช้ไม่ได้ (ลูกค้าใหม่ต้องสแกนใหม่)
             table.refresh_uuid()
             
-            # 2. ⭐ เพิ่มส่วนนี้: ส่งสัญญาณ WebSocket บอกให้หน้ารายการโต๊ะรีเฟรช
+            # 3. ส่งสัญญาณ WebSocket
             channel_layer = get_channel_layer()
+            
+            # 3.1 สั่งให้หน้าจอ Cashier รีเฟรช (เพื่อเอาโต๊ะออกจาก Dashboard)
             async_to_sync(channel_layer.group_send)(
-                f'restaurant_{table.restaurant.id}',  # ส่งเข้า Group ของร้านนั้นๆ
+                f'restaurant_{table.restaurant.id}',
                 {
-                    'type': 'table_update_notification', # ชื่อ Event ที่จะไปเขียนใน consumers.py
+                    'type': 'table_update_notification',
                     'message': 'Refresh Tables'
                 }
             )
             
-            messages.success(request, f'รับชำระเงินโต๊ะ {table.name} เรียบร้อยแล้ว')
+            # 3.2 (Optional) สั่งให้หน้าจอลูกค้าปิดหน้าต่างจ่ายเงิน (ถ้าเปิดค้างไว้)
+            async_to_sync(channel_layer.group_send)(
+                f'restaurant_{table.restaurant.id}', 
+                {
+                    'type': 'customer_payment_update', # ต้องไปดักใน consumers.py ถ้าต้องการ
+                    'command': 'hide_customer_payment'
+                }
+            )
+            
+            messages.success(request, f'รับชำระเงินโต๊ะ {table.name} เรียบร้อย ({payment_method})')
         
     return redirect('cashier_dashboard')
 
@@ -525,3 +544,143 @@ def delete_order_item(request, item_id):
 
 def restaurant_suspended(request):
     return render(request, 'restaurants/suspended.html')
+
+
+
+
+# data analyte
+@login_required
+@restaurant_active_required
+def analytics_dashboard(request):
+    restaurant = request.user.restaurant
+    
+    # 1. จัดการ Date Filter (Default = 30 วันย้อนหลัง)
+    start_date_str = request.GET.get('start_date')
+    end_date_str = request.GET.get('end_date')
+    
+    today = timezone.now().date()
+    
+    if start_date_str and end_date_str:
+        start_date = datetime.datetime.strptime(start_date_str, '%Y-%m-%d').date()
+        end_date = datetime.datetime.strptime(end_date_str, '%Y-%m-%d').date()
+    else:
+        start_date = today - datetime.timedelta(days=29) # 30 วันรวมวันนี้
+        end_date = today
+
+    # Base Query: ออเดอร์ที่จ่ายเงินแล้วในช่วงเวลานั้น
+    orders = restaurant.orders.filter(
+        status='COMPLETED',
+        is_paid=True,
+        created_at__date__range=[start_date, end_date]
+    )
+
+    # 2. Summary Cards (KPIs)
+    total_revenue = orders.aggregate(Sum('total_price'))['total_price__sum'] or 0
+    total_orders = orders.count()
+    # AOV = Average Order Value (ยอดขายเฉลี่ยต่อบิล) สำคัญมากสำหรับเจ้าของ
+    avg_order_value = total_revenue / total_orders if total_orders > 0 else 0
+    
+    # 3. Sales Trend Graph (กราฟเส้นยอดขายรายวัน)
+    daily_sales = orders.annotate(date=TruncDate('created_at')) \
+        .values('date') \
+        .annotate(total=Sum('total_price'), count=Count('id')) \
+        .order_by('date')
+        
+    # เตรียมข้อมูล JSON สำหรับ Chart.js
+    chart_dates = [x['date'].strftime('%d/%m') for x in daily_sales]
+    chart_revenues = [float(x['total']) for x in daily_sales]
+    chart_orders = [x['count'] for x in daily_sales]
+
+    # 4. Top Selling Items (รายการขายดี) - Join กับ OrderItem
+    # ต้องดึง OrderItem ที่อยู่ใน Order เหล่านั้น
+    top_items = OrderItem.objects.filter(order__in=orders) \
+        .values('menu_item__name') \
+        .annotate(total_qty=Sum('quantity'), total_sales=Sum(F('price') * F('quantity'))) \
+        .order_by('-total_qty')[:10] # เอา 10 อันดับแรก
+
+    top_items_labels = [x['menu_item__name'] for x in top_items]
+    top_items_data = [x['total_qty'] for x in top_items]
+
+    # 5. Peak Hours (ช่วงเวลาขายดี)
+    peak_hours = orders.annotate(hour=TruncHour('created_at')) \
+        .values('hour') \
+        .annotate(count=Count('id')) \
+        .order_by('hour')
+        
+    # แปลงข้อมูล Peak Hours ให้เป็น Format ง่ายๆ (00-23 นาฬิกา)
+    # (ส่วนนี้อาจต้องทำ Logic เพิ่มใน Template หรือ JS เพื่อ map ชั่วโมงให้ครบ 24 ชม.)
+
+    context = {
+        'restaurant': restaurant,
+        'start_date': start_date.strftime('%Y-%m-%d'),
+        'end_date': end_date.strftime('%Y-%m-%d'),
+        'total_revenue': total_revenue,
+        'total_orders': total_orders,
+        'avg_order_value': avg_order_value,
+        # Chart Data
+        'chart_dates': json.dumps(chart_dates),
+        'chart_revenues': json.dumps(chart_revenues),
+        'top_items_labels': json.dumps(top_items_labels),
+        'top_items_data': json.dumps(top_items_data),
+        # Tables
+        'top_items_list': top_items,
+        'recent_orders': orders.order_by('-created_at')[:20] # 20 รายการล่าสุดในตาราง
+    }
+
+    return render(request, 'restaurants/analytics.html', context)
+
+
+# --------
+
+# show all order to admin
+
+
+@login_required
+@restaurant_active_required
+def order_history(request):
+    restaurant = request.user.restaurant
+    
+    # ดึงออเดอร์ที่จบแล้ว เรียงจากใหม่ -> เก่า
+    orders_list = restaurant.orders.filter(
+        status='COMPLETED', 
+        is_paid=True
+    ).order_by('-created_at')
+    
+    # แบ่งหน้า หน้าละ 50 รายการ
+    paginator = Paginator(orders_list, 50) 
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    return render(request, 'restaurants/order_history.html', {
+        'restaurant': restaurant,
+        'page_obj': page_obj
+    })
+
+# 2. API สำหรับดึงรายละเอียดบิล (เพื่อแสดงใน Modal)
+@login_required
+def get_order_details_api(request, order_id):
+    try:
+        # เช็คว่าเป็นออเดอร์ของร้านนี้จริงๆ (Security)
+        order = request.user.restaurant.orders.get(id=order_id)
+        
+        items = []
+        for item in order.items.all():
+            items.append({
+                'name': item.menu_item.name,
+                'quantity': item.quantity,
+                'price': float(item.price),
+                'total': float(item.price * item.quantity)
+            })
+            
+        return JsonResponse({
+            'success': True,
+            'id': order.id,
+            'date': order.created_at.strftime('%d/%m/%Y %H:%M'),
+            'table': order.table.name,
+            'items': items,
+            'total': float(order.total_price),
+            'payment_method': getattr(order, 'payment_method', 'ไม่ระบุ') or 'เงินสด',
+        })
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=400)
+# -----

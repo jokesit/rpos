@@ -41,4 +41,9 @@ urlpatterns = [
     path('super-admin/toggle-status/<int:restaurant_id>/', views.toggle_restaurant_active, name='toggle_restaurant_active'),
 
     path('suspended/', views.restaurant_suspended, name='restaurant_suspended'),
+
+    path('analytics/', views.analytics_dashboard, name='analytics_dashboard'),
+
+    path('analytics/history/', views.order_history, name='order_history'),
+    path('api/order-details/<int:order_id>/', views.get_order_details_api, name='get_order_details_api'),
 ]

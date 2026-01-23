@@ -18,9 +18,11 @@
             <p class="text-xs text-gray-500">Owner Dashboard</p>
         </div>
         <nav class="space-y-1">
+            
             <a href="{% url 'dashboard' %}" class="flex items-center gap-3 px-4 py-3 bg-blue-50 text-blue-700 font-bold rounded-lg transition">
                 <span>🏠</span> ภาพรวม
             </a>
+            
             <a href="{% url 'menu_manage' %}" class="flex items-center gap-3 px-4 py-3 text-gray-600 hover:bg-gray-50 rounded-lg transition">
                 <span>🍽️</span> จัดการเมนู
             </a>
@@ -62,12 +64,24 @@
         <div class="mb-8 flex justify-between items-end">
             <div>
                 <h2 class="text-2xl font-bold text-gray-800">สวัสดี, {{ user.first_name|default:user.email }} 👋</h2>
+                 <a href="{% url 'analytics_dashboard' %}"
+                    class="inline-flex items-center gap-2.5
+                        px-5 py-2.5 mb-3 mt-2 rounded-lg
+                        bg-blue-50 text-blue-700 text-base font-semibold
+                        hover:bg-blue-100 hover:text-blue-800
+                        active:scale-[0.97] transition-all duration-150
+                        shadow-sm hover:shadow-md">
+                    
+                    <span class="text-lg">📊</span>
+                    <span>ข้อมูลเชิงลึก</span>
+                </a>
                 <p class="text-gray-500">นี่คือสรุปภาพรวมร้านของคุณในวันนี้</p>
             </div>
             <span class="text-sm bg-gray-100 px-3 py-1 rounded-full text-gray-600">
                 📅 {% now "d F Y" %}
             </span>
         </div>
+       
 
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
             <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
