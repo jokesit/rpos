@@ -5,19 +5,20 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from .models import Table, Category, MenuItem, Restaurant
 from .forms import RestaurantForm, CategoryForm, MenuItemForm, RestaurantSettingsForm, PromoImageFormSet
-from django.db.models import Sum, Count, F, Avg
+from django.db.models import Sum, Count, F
 from django.db.models.functions import TruncDate, TruncHour
 from decimal import Decimal
 from django.utils import timezone
 from django.core.exceptions import ObjectDoesNotExist
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
-from orders.models import OrderItem, Order
+from orders.models import OrderItem
 from django.contrib.auth.decorators import user_passes_test
 from django.views.decorators.http import require_POST
 from .decorators import restaurant_active_required
 from django.core.paginator import Paginator
 from django.http import JsonResponse
+
 
 
 @user_passes_test(lambda u: u.is_superuser) # เฉพาะ Superuser เท่านั้น
@@ -322,30 +323,53 @@ def table_bill_detail(request, table_id):
     
     # 1. ดึงออเดอร์ที่ยังไม่จ่าย (Active Orders)
     # เราไม่เอาที่ CANCELLED
-    active_orders = table.orders.filter(is_paid=False).exclude(status='CANCELLED')
+    active_orders = table.orders.filter(is_paid=False).exclude(status='CANCELLED').order_by('created_at')
     
     if not active_orders.exists():
         messages.warning(request, 'โต๊ะนี้ไม่มีรายการค้างชำระ')
         return redirect('cashier_dashboard')
 
-    # 2. รวบรวมรายการอาหารทั้งหมด (Order Items) จากทุกออเดอร์
-    # เรียงตามเวลาสั่ง (เก่า -> ใหม่)
-    order_items = []
+    # =========================================================
+    # ⭐ 2. รวบรวมและรวมรายการอาหาร (Aggregation Logic) ⭐
+    # =========================================================
+    aggregated_items = {}
     subtotal = Decimal('0.00')
     
     for order in active_orders:
         for item in order.items.select_related('menu_item').all():
+            # คำนวณยอดเงินของ item นี้
             item_total = item.price * item.quantity
+            
+            # บวกยอดรวมทันที
             subtotal += item_total
-            order_items.append({
-                'id': item.id,
-                'menu_name': item.menu_item.name,
-                'quantity': item.quantity,
-                'price': item.price,
-                'total': item_total,
-                'order_time': order.created_at,
-                'status': order.status
-            })
+            
+            # สร้าง Key สำหรับการรวม (ใช้ ID เมนู และ ราคา)
+            # ถ้าราคาเปลี่ยน ต้องแยกบรรทัด เพื่อความถูกต้องทางบัญชี
+            key = (item.menu_item.id, item.price)
+
+            if key in aggregated_items:
+                # ถ้ามีรายการนี้อยู่แล้ว ให้บวกจำนวนเพิ่ม
+                aggregated_items[key]['quantity'] += item.quantity
+                aggregated_items[key]['total'] += item_total
+                
+                # อัปเดตข้อมูลล่าสุด (เพื่อให้เวลาลบ จะลบตัวล่าสุดก่อน LIFO)
+                aggregated_items[key]['id'] = item.id 
+                aggregated_items[key]['status'] = order.status
+                aggregated_items[key]['order_time'] = order.created_at
+            else:
+                # ถ้ายังไม่มี ให้สร้างใหม่
+                aggregated_items[key] = {
+                    'id': item.id, # ID สำหรับใช้ลบ (Delete Item)
+                    'menu_name': item.menu_item.name,
+                    'quantity': item.quantity,
+                    'price': item.price,
+                    'total': item_total,
+                    'order_time': order.created_at,
+                    'status': order.status
+                }
+
+    # แปลง Dictionary กลับเป็น List เพื่อส่งให้ Template วนลูป
+    order_items = list(aggregated_items.values())
 
     # 3. คำนวณภาษีและ Service Charge
     # แปลงค่า Default 0 ให้เป็น Decimal('0') เพื่อไม่ให้กลายเป็น Float
@@ -364,6 +388,21 @@ def table_bill_detail(request, table_id):
     # ยอดสุทธิ
     grand_total = after_service + vat_amount
 
+    # ⭐ 4. สร้างเลขที่บิล (Bill Number) ⭐
+    # ใช้ ID ของออเดอร์แรกสุดเป็นเลขที่บิลหลัก
+    # หรือถ้าไม่มีออเดอร์เลย ให้เป็น "-"
+    first_order = active_orders.first() # query set นี้ order_by created_at มาแล้ว
+    
+    if first_order:
+        # แปลงเป็นเวลาท้องถิ่นก่อน (เพื่อให้ได้วันที่ที่ถูกต้องของไทย)
+        local_created_at = timezone.localtime(first_order.created_at)
+        
+        # จัดรูปแบบ: YYYYMMDD-ID (เช่น 20260123-89)
+        date_str = local_created_at.strftime('%Y%m%d')
+        bill_number = f"{date_str}-{first_order.id}"
+    else:
+        bill_number = "-"
+
     context = {
         'restaurant': restaurant,
         'table': table,
@@ -373,6 +412,7 @@ def table_bill_detail(request, table_id):
         'vat_amount': vat_amount,
         'grand_total': grand_total,
         'active_orders': active_orders,
+        'bill_number': bill_number,
     }
     
     return render(request, 'restaurants/bill_detail.html', context)
@@ -419,7 +459,7 @@ def close_bill(request, table_id):
             async_to_sync(channel_layer.group_send)(
                 f'restaurant_{table.restaurant.id}', 
                 {
-                    'type': 'customer_payment_update', # ต้องไปดักใน consumers.py ถ้าต้องการ
+                    'type': 'hide_customer_payment', # ต้องไปดักใน consumers.py ถ้าต้องการ
                     'command': 'hide_customer_payment'
                 }
             )

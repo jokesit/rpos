@@ -235,7 +235,7 @@
                 <span>{% now "d/m/y H:i" %}</span>
             </div>
             <div class="flex justify-between text-[10px]">
-                <span>Bill: #{{ order_items.0.order.id|default:"-" }}</span>
+                <span>Bill: {{ bill_number }}</span>
                 <span>Cashier: {{ request.user.username }}</span>
             </div>
         </div>
@@ -298,7 +298,7 @@
             <div class="text-right">
                 <div class="text-xl font-bold text-gray-400 uppercase tracking-widest">Receipt</div>
                 <div class="mt-2 text-sm">
-                    <p><b>เลขที่:</b> #{{ order_items.0.order.id|default:"-" }}</p>
+                    <p><b>เลขที่:</b> {{ bill_number }}</p>
                     <p><b>วันที่:</b> {% now "d M Y H:i" %}</p>
                     <p><b>โต๊ะ:</b> {{ table.name }}</p>
                     <p><b>พนักงาน:</b> {{ request.user.username }}</p>

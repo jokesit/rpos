@@ -95,12 +95,12 @@ class OrderConsumer(AsyncWebsocketConsumer):
         }))
         
     # 4.3 (แถม) Handler เดิมสำหรับการแจ้งเตือน Order
-    async def order_notification(self, event):
-        await self.send(text_data=json.dumps({
-            'type': 'order_notification',
-            'message': event['message'],
-            'order': event.get('order')
-        }))
+    # async def order_notification(self, event):
+    #     await self.send(text_data=json.dumps({
+    #         'type': 'order_notification',
+    #         'message': event['message'],
+    #         'order': event.get('order')
+    #     }))
 
 
     async def table_update_notification(self, event):
@@ -123,3 +123,6 @@ class OrderConsumer(AsyncWebsocketConsumer):
             'total': order_data.get('total_price', 0),
             'message': message
         }))
+
+
+    

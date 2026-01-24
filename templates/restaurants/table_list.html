@@ -1,7 +1,8 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="flex flex-col md:flex-row gap-6">
+<div class="flex flex-col md:flex-row gap-6 print:hidden">
+    
     <aside class="w-full md:w-64 bg-white rounded-xl shadow-sm border border-gray-100 p-6 h-fit shrink-0">
         <div class="text-center mb-6">
             {% if restaurant.image %}
@@ -42,13 +43,11 @@
             </a>
 
             <a href="{% url 'customer_display' restaurant.slug %}" target="_blank" onclick="openCustomerWindow(event, this.href)" class="flex items-center gap-3 p-4 bg-purple-600 text-white rounded-xl shadow-lg hover:bg-purple-700 transition transform hover:scale-105 mt-4">
-                
                 <div class="p-3 bg-white/20 rounded-lg">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                     </svg>
                 </div>
-                
                 <div>
                     <h3 class="font-bold text-lg">เปิดจอฝั่งลูกค้า</h3>
                     <p class="text-sm text-purple-200">Customer Display Screen</p>
@@ -74,7 +73,7 @@
 
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {% for table in tables %}
-            <div class="bg-white p-6 rounded-lg shadow hover:shadow-md transition">
+            <div class="bg-white p-6 rounded-lg shadow hover:shadow-md transition relative group">
                 <div class="flex justify-between items-start">
                     <h3 class="text-xl font-bold text-gray-800">{{ table.name }}</h3>
                     <form method="post" action="{% url 'delete_table' table.id %}" onsubmit="return confirm('ยืนยันที่จะลบโต๊ะนี้?');">
@@ -87,11 +86,19 @@
                     <img src="{{ table.get_qr_image }}" alt="QR Code {{ table.name }}" class="w-40 h-40 border p-2">
                 </div>
                 
-                <div class="mt-4 text-center">
-                    <p class="text-xs text-gray-400 mb-2">Scan เพื่อสั่งอาหาร</p>
-                    <a href="{{ table.get_order_url }}" target="_blank" class="text-blue-600 hover:underline text-sm">
-                        ทดสอบลิ้งค์
-                    </a>
+                <div class="mt-4 text-center space-y-2">
+                    <p class="text-xs text-gray-400">Scan เพื่อสั่งอาหาร</p>
+                    
+                    <div class="flex justify-center gap-3">
+                        <a href="{{ table.get_order_url }}" target="_blank" class="text-blue-600 hover:underline text-xs bg-blue-50 px-2 py-1 rounded">
+                            🔗 ทดสอบลิ้งค์
+                        </a>
+                        
+                        <button onclick="printTableQR('{{ table.name }}', '{{ table.get_qr_image }}')" 
+                            class="text-gray-700 hover:text-black hover:bg-gray-100 text-xs px-2 py-1 rounded border flex items-center gap-1 transition">
+                            🖨️ พิมพ์ QR
+                        </button>
+                    </div>
                 </div>
             </div>
             {% empty %}
@@ -103,12 +110,63 @@
     </main>
 </div>
 
+<style>
+    @media print {
+        /* ซ่อนทุกอย่างในหน้าเว็บ */
+        body * {
+            visibility: hidden;
+            height: 0;
+            overflow: hidden;
+        }
+
+        /* แสดงเฉพาะส่วนที่จะพิมพ์ */
+        #qr-print-area, #qr-print-area * {
+            visibility: visible;
+            height: auto;
+            overflow: visible;
+        }
+
+        /* จัดตำแหน่งให้ติดขอบกระดาษ */
+        #qr-print-area {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+            margin: 0;
+            padding: 0;
+            background: white;
+        }
+        
+        @page {
+            size: auto;
+            margin: 0;
+        }
+    }
+</style>
+
+<div id="qr-print-area" class="hidden print:flex flex-col items-center justify-center text-center p-4 max-w-[80mm] mx-auto">
+    {% if restaurant.image %}
+        <img src="{{ restaurant.image.url }}" class="w-16 h-16 object-cover rounded-full mb-2 grayscale">
+    {% endif %}
+    
+    <h1 class="text-xl font-bold mb-1">{{ restaurant.name }}</h1>
+    <p class="text-xs text-gray-500 mb-4">สแกนเพื่อสั่งอาหาร</p>
+
+    <div class="border-2 border-black p-2 rounded-lg mb-2">
+        <img id="print-qr-img" src="" class="w-48 h-48 object-contain">
+    </div>
+
+    <h2 id="print-table-name" class="text-3xl font-bold mt-2 border-b-2 border-black pb-1">Table X</h2>
+    
+    <p class="text-[10px] mt-4 text-gray-400">Powered by R-POS</p>
+</div>
+
 
 <script>
     const restaurantId = "{{ restaurant.id }}";
     const wsScheme = window.location.protocol === "https:" ? "wss" : "ws";
     
-    // เชื่อมต่อ WebSocket ช่องเดียวกับที่ใช้ในร้าน
+    // เชื่อมต่อ WebSocket
     const socket = new WebSocket(
         wsScheme + '://' + window.location.host + '/ws/restaurant/' + restaurantId + '/'
     );
@@ -119,19 +177,34 @@
 
     socket.onmessage = function(e) {
         const data = JSON.parse(e.data);
-        
-        // ⭐ ถ้าได้รับคำสั่ง 'refresh_tables' ให้รีเฟรชหน้าจอทันที
         if (data.command === 'refresh_tables') {
             console.log("♻️ Table updated! Refreshing page...");
             window.location.reload(); 
         }
     };
     
-    // Auto Reconnect (กันเหนียว)
     socket.onclose = function() {
         console.log("WebSocket closed. Reconnecting...");
         setTimeout(() => location.reload(), 5000);
     };
+
+    // --- ⭐ ฟังก์ชันสั่งพิมพ์ QR Code ---
+    function printTableQR(tableName, qrImageUrl) {
+        // 1. ใส่ข้อมูลลงใน Print Template
+        document.getElementById('print-table-name').innerText = tableName;
+        document.getElementById('print-qr-img').src = qrImageUrl;
+
+        // 2. เพิ่ม Class เพื่อบอก CSS ว่าตอนนี้กำลังจะพิมพ์
+        document.body.classList.add('printing-qr');
+
+        // 3. สั่งพิมพ์
+        window.print();
+
+        // 4. ล้าง Class หลังพิมพ์เสร็จ
+        setTimeout(() => {
+            document.body.classList.remove('printing-qr');
+        }, 500);
+    }
 </script>
 
 {% endblock %}
