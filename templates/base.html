@@ -12,7 +12,12 @@
 
     <nav class="bg-white/90 backdrop-blur-md p-4 text-gray-800 shadow-sm sticky top-0 z-50 border-b border-gray-100">
         <div class="container mx-auto flex justify-between items-center">
-            <a href="/" class="font-bold text-xl">RPOS System</a>
+            {% if user.is_authenticated %}
+                <a href="{% url 'dashboard' %}" class="font-bold text-xl">RPOS System</a>
+            {% else %}
+                <a href="/" class="font-bold text-xl">RPOS System</a>
+            {% endif %}
+            
             <div>
                 {% if user.is_authenticated %}
                     <span class="mr-4">สวัสดี, {{ user.email }}</span>
